@@ -1,0 +1,16 @@
+{
+  "name": "la-grinding-homepage",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production implementation of the L.A. Grinding homepage from the Claude Design handoff.",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "serve": "node tools/serve.mjs",
+    "dev": "npm run build && npm run serve",
+    "start": "npm run dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

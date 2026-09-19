@@ -1,0 +1,30 @@
+# Build output — regenerate with `npm run build`
+dist/
+
+# Local QA capture artifacts
+design-source/.rendered/
+
+# Dependencies
+node_modules/
+
+# Vercel
+.vercel/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+.vercel

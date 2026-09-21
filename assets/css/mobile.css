@@ -10,6 +10,7 @@
  *
  * Contents
  *   1. Hero slider — 40% taller, flag clear of the arrow, slide 4 dropped
+ *      …plus the utility bar's phone numbers, kept on one line
  *   2. Service category grid — 2 large + 3 compact, all five above the fold
  *   3. About Us — fixes the overflowing photo and the collapsed OEM grid
  */
@@ -35,6 +36,9 @@
   #page .hero-track img[src$="hero-plate-clean.png"] {
     content: url("../uploads/hero-plate-mobile.png");
   }
+  /* min6-mobile also redraws the CA/NV/AZ map 6% smaller and re-centred, so it sits
+   * evenly between the "BASED IN" copy and the "Hours & Directions" button instead of
+   * crowding the copy (3.1% of clear plate on each side, against 0.7% / 4.3% before). */
   #page .hero-track img[src$="min6.png"] {
     content: url("../uploads/min6-mobile.png");
   }
@@ -71,11 +75,46 @@
     left: 19.5% !important;
   }
 
+  /* Slide 3 shows three pieces of hardware — a two-bit router set plus the
+   * reciprocating blade — drawn at desktop scale. On a phone they collided with each
+   * other, with the copy on the left and with the "Order now" block on the right.
+   * Mobile keeps two pieces: one router bit (the artwork is cropped to the right-hand
+   * bit by tools/make-mobile-plates.mjs) and the blade, both at 60% height, spaced
+   * evenly across the gap between the copy (ends 44.8%) and the CTA (starts 73.5%). */
+  #page .hero-track img[src$="slide3-bits.png"] {
+    content: url("../uploads/slide3-bits-mobile.png");
+    height: 46.8% !important;   /* was 78% */
+    left: 47.1% !important;     /* was 43% */
+  }
+  /* Rotated -8deg, so its laid-out box starts ~0.9% left of its `left`. */
+  #page .hero-track img[src$="slide3-blade.png"] {
+    height: 51.6% !important;   /* was 86% */
+    left: 56.9% !important;     /* was 56% */
+  }
+
   /* A slightly larger arrow on the taller bar — still the design's shape and colour,
    * just an easier tap target than 22px. */
   #page .hero-slider > button {
     width: 26px !important;
     height: 26px !important;
+  }
+
+  /* The three regional phone numbers need 360px to sit on one line at the handoff's
+   * 13.5px, but a 375px phone only offers 343px, so NV dropped to a second row and
+   * the utility bar became two lines deep. Trimming the type, the gaps and the
+   * handset icons brings the row to ~304px, which fits from 360px upwards. */
+  #page #stickyNav .util-row > div:first-child > :last-child {
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+  }
+  #page #stickyNav .util-row > div:first-child > :last-child > * {
+    white-space: nowrap !important;
+    gap: 5px !important;
+    font-size: 12px !important;
+  }
+  #page #stickyNav .util-row > div:first-child > :last-child svg {
+    width: 12px !important;
+    height: 12px !important;
   }
 
   /* ---------------------------------------------------------------- *
@@ -142,6 +181,35 @@
     object-position: 58% 42% !important;
   }
 
+  /* The handoff's desktop layout runs a navy wedge diagonally across the foot of the
+   * photograph and sets the two credential badges on it; its mobile CSS drops the
+   * wedge and leaves the badges as a detached bar below the copy. This puts them back
+   * on the photo, keeping the diagonal, so the section opens the way the design does.
+   * The photo is given the extra height the band occupies, and the band is taken out
+   * of the flow and pinned to the bottom of it. */
+  #page .about-photo {
+    height: 252px !important;
+  }
+  #page .about-badges {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 252px !important;
+    /* The handoff pins this inline with `bottom: 3.2%`; leaving that set alongside a
+     * `top` would stretch the bar to span between them instead of hugging its content. */
+    bottom: auto !important;
+    transform: translateY(-100%) !important;
+    margin: 0 !important;
+    z-index: 3 !important;
+    background: #0B2A4A !important;
+    /* The diagonal rises to the right, as it does on desktop. The extra top padding
+     * keeps the badges clear of the slope on the shallow (left) side. */
+    clip-path: polygon(0 32%, 100% 0, 100% 100%, 0 100%) !important;
+    padding: 34px 16px 18px !important;
+    gap: 20px !important;
+    align-items: center !important;
+  }
+
   /* A clear light panel for the copy, so nothing sits on busy photography. */
   #page .about-copy {
     background: #e7e9eb !important;
@@ -168,12 +236,13 @@
   /* The handoff asks for a four-column logo grid, but its own
    * `[style*="grid-template-columns"] { grid-template-columns: 1fr }` rule is declared
    * later at equal specificity and wins, so all eight logos stacked in one column.
-   * Flex sidesteps that rule entirely and centres the short last row, which a grid
-   * would leave ragged. */
+   * Flex sidesteps that rule entirely. The rows read 3 / 3 / 2, and the short last
+   * row (Bobcat, Carlton) stays left-aligned with the columns above it rather than
+   * being centred under them. */
   #page .about-oem-logos {
     display: flex !important;
     flex-wrap: wrap !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     align-items: center !important;
     gap: 12px 10px !important;
     margin-top: 18px !important;

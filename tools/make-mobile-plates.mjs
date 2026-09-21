@@ -31,6 +31,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const MOBILE_HEIGHT_SCALE = 1.4;
 /** Where the flag's left edge lands, as a % of image width. Clears the 22px arrow. */
 export const FLAG_LEFT_PCT = 10.5;
+/** min6 only: the CA/NV/AZ map is redrawn 6% smaller and re-centred in the gap
+ *  between the "BASED IN" copy (which ends at ~46.1%) and the "Hours & Directions"
+ *  button (which starts at 73.1%), so it is no longer crowded against the copy. */
+export const MAP_SCALE = 0.94;
+export const MAP_LEFT_PCT = 49.24;
 
 const script = `
 import numpy as np
@@ -39,8 +44,10 @@ import sys, json
 
 H_SCALE = ${MOBILE_HEIGHT_SCALE}
 FLAG_LEFT_PCT = ${FLAG_LEFT_PCT}
+MAP_SCALE = ${MAP_SCALE}
+MAP_LEFT_PCT = ${MAP_LEFT_PCT}
 
-def build(src, dst):
+def build(src, dst, move_map=False):
     im = Image.open(src).convert("RGB")
     a = np.asarray(im).astype(np.float64)
     H, W, _ = a.shape
@@ -79,9 +86,35 @@ def build(src, dst):
     flag_rgb = a[fy0:fy1 + 1, fx0:fx1 + 1].copy()
     flag_a = alpha[fy0:fy1 + 1, fx0:fx1 + 1].copy()
 
-    # everything that is not the flag stays where it is, horizontally
+    # everything that is not a moved piece stays where it is, horizontally
     rest_a = alpha.copy()
     rest_a[fy0:fy1 + 1, fx0:fx1 + 1] = 0.0
+
+    # min6 only: lift the map out too, so it can be resized and re-centred.
+    # The artwork falls into clear column runs (flag | map | button); the map is the
+    # run holding the blue land mass, which also carries its pins and state labels.
+    map_piece = None
+    if move_map:
+        cols = (alpha[inner0:inner1] > 0.5).sum(axis=0)
+        runs, start = [], None
+        for x in range(W):
+            if cols[x] > 0 and start is None:
+                start = x
+            elif cols[x] == 0 and start is not None:
+                if x - start > 3: runs.append((start, x - 1))
+                start = None
+        if start is not None and W - start > 3: runs.append((start, W - 1))
+        blue = (a[..., 2] > 90) & (a[..., 2] > a[..., 0] + 25) & (a[..., 1] < a[..., 2])
+        best, best_n = None, 0
+        for (x0, x1) in runs:
+            n = int(blue[inner0:inner1, x0:x1 + 1].sum())
+            if n > best_n: best, best_n = (x0, x1), n
+        mx0, mx1 = best
+        band_rows = np.nonzero((alpha[:, mx0:mx1 + 1] > 0.5).any(axis=1))[0]
+        my0, my1 = int(band_rows.min()), int(band_rows.max())
+        map_piece = (a[my0:my1 + 1, mx0:mx1 + 1].copy(),
+                     alpha[my0:my1 + 1, mx0:mx1 + 1].copy(), mx0, mx1, my0, my1)
+        rest_a[my0:my1 + 1, mx0:mx1 + 1] = 0.0
 
     # 4. rebuild the texture at the new height: bars fixed, middle stretched
     H2 = int(round(H * H_SCALE))
@@ -109,6 +142,26 @@ def build(src, dst):
     new_fx = int(round(W * FLAG_LEFT_PCT / 100.0))
     over(canvas, fy0 + dy, new_fx, flag_rgb, flag_a)
 
+    # 7. the map, 6% smaller and re-centred in the gap between copy and button.
+    #    Scaled through PIL so the land mass keeps its shape, and centred on the row
+    #    it already sat on so it stays on the plate's optical centre line.
+    info_map = None
+    if map_piece is not None:
+        mrgb, mal, mx0, mx1, my0, my1 = map_piece
+        mh, mw = mal.shape
+        nw, nh = max(1, int(round(mw * MAP_SCALE))), max(1, int(round(mh * MAP_SCALE)))
+        rgb_s = np.asarray(Image.fromarray(np.clip(mrgb, 0, 255).astype(np.uint8))
+                           .resize((nw, nh), Image.LANCZOS)).astype(np.float64)
+        al_s = np.asarray(Image.fromarray((mal * 255).astype(np.uint8))
+                          .resize((nw, nh), Image.LANCZOS)).astype(np.float64) / 255.0
+        new_mx = int(round(W * MAP_LEFT_PCT / 100.0))
+        centre = (my0 + my1) / 2.0 + dy
+        new_my = int(round(centre - nh / 2.0))
+        over(canvas, new_my, new_mx, rgb_s, al_s)
+        info_map = {"was_pct": [round(mx0 / W * 100, 2), round((mx1 + 1) / W * 100, 2)],
+                    "now_pct": [round(new_mx / W * 100, 2), round((new_mx + nw) / W * 100, 2)],
+                    "scale": MAP_SCALE}
+
     Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)).save(dst)
     return {
         "src": src, "dst": dst, "from": [W, H], "to": [W, H2],
@@ -116,17 +169,55 @@ def build(src, dst):
         "flag_was_pct": round(fx0 / W * 100, 2),
         "flag_now_pct": round(new_fx / W * 100, 2),
         "flag_px": [fx1 - fx0 + 1, fy1 - fy0 + 1],
+        "map": info_map,
     }
 
 out = []
-for s, d in json.loads(sys.argv[1]):
-    out.append(build(s, d))
+for s, d, mm in json.loads(sys.argv[1]):
+    out.append(build(s, d, mm))
 print(json.dumps(out, indent=2))
 `;
 
+/* Slide 3 shows a two-bit router set beside the reciprocating blade. Three pieces of
+ * hardware is too much detail for a phone-width plate, so the mobile variant keeps a
+ * single bit. The two bits are separated by a clear column of transparency, so the
+ * crop is found rather than hard-coded. */
+const cropScript = `
+import numpy as np
+from PIL import Image
+import sys, json
+
+src, dst = sys.argv[1], sys.argv[2]
+im = Image.open(src).convert("RGBA")
+a = np.asarray(im)
+al = a[..., 3] > 12
+cols = al.sum(axis=0)
+runs, start = [], None
+for x in range(a.shape[1]):
+    if cols[x] > 0 and start is None:
+        start = x
+    elif cols[x] == 0 and start is not None:
+        if x - start > 20: runs.append((start, x - 1))
+        start = None
+if start is not None and a.shape[1] - start > 20: runs.append((start, a.shape[1] - 1))
+if len(runs) < 2: raise SystemExit("expected two bits, found %d" % len(runs))
+x0, x1 = runs[-1]                       # keep the right-hand bit
+rows = np.nonzero(al[:, x0:x1 + 1].any(axis=1))[0]
+y0, y1 = int(rows.min()), int(rows.max())
+im.crop((x0, y0, x1 + 1, y1 + 1)).save(dst)
+print(json.dumps({"runs": runs, "kept": [x0, x1, y0, y1],
+                  "size": [x1 - x0 + 1, y1 - y0 + 1]}))
+`;
+
+const cropOut = execFileSync("python3", ["-c", cropScript,
+  join(ROOT, "assets/uploads/slide3-bits.png"),
+  join(ROOT, "assets/uploads/slide3-bits-mobile.png")], { encoding: "utf8" });
+console.log("slide3-bits-mobile.png:", cropOut.trim());
+
 const pairs = [
-  [join(ROOT, "assets/uploads/hero-plate-clean.png"), join(ROOT, "assets/uploads/hero-plate-mobile.png")],
-  [join(ROOT, "assets/uploads/min6.png"), join(ROOT, "assets/uploads/min6-mobile.png")]
+  // [source, destination, whether this plate carries the map that also moves]
+  [join(ROOT, "assets/uploads/hero-plate-clean.png"), join(ROOT, "assets/uploads/hero-plate-mobile.png"), false],
+  [join(ROOT, "assets/uploads/min6.png"), join(ROOT, "assets/uploads/min6-mobile.png"), true]
 ];
 
 const result = execFileSync("python3", ["-c", script, JSON.stringify(pairs)], { encoding: "utf8" });

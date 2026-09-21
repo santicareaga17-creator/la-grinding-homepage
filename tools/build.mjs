@@ -340,7 +340,10 @@ for (const name of new Set(boundRefs)) {
  * longer present, rather than silently going stale when the design is re-exported. */
 const COPY_FIXES = [
   // The "/ Reno" qualifier was dropped from the Saw Blades category card.
-  ["Saw Blades / Reno", "Saw Blades"]
+  ["Saw Blades / Reno", "Saw Blades"],
+  // Commercial Orders now states nationwide coverage. The leading "across " keeps this
+  // unique: three other places name the same three states and must keep doing so.
+  ["across California, Nevada and Arizona.", "Nationwide across the U.S."]
 ];
 for (const [from, to] of COPY_FIXES) {
   if (!body.includes(from)) {

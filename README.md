@@ -104,8 +104,9 @@ the design, rebuild, and the content follows automatically.
 That last one covers `COPY_FIXES` and `LINK_FIXES` in `tools/build.mjs`: wording and
 destinations changed after the handoff was exported are corrected at build time rather
 than by editing `design-source/`, so that folder stays a faithful record of what Claude
-Design produced. Currently they drop the "/ Reno" qualifier from the Saw Blades card and
-point the Sharpening Support card at `lagrinding.com/sharpening/`.
+Design produced. Currently they drop the "/ Reno" qualifier from the Saw Blades card,
+change the Commercial Orders coverage line to nationwide, and point the Sharpening
+Support card at `lagrinding.com/sharpening/`.
 
 `LINK_FIXES` finds its card by the image's `alt` text rather than by the href it is
 replacing, because several unrelated links on the page share that href — a blanket

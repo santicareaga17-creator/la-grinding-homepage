@@ -117,6 +117,12 @@ what Claude Design produced.
   design no longer has the list being extended. Note the card has two text slots, an
   eyebrow and a name, so a product and its description share the name field with an em
   dash — the pattern the design's own cards already use.
+- `EDITS` in `tools/data.mjs` changes entries the design already defines — currently the
+  Shop-by-category card that was "Serrated Tape Knives" (renamed, repointed and given
+  its own photo) and the Tree Care card's image. Each edit names the lists it applies
+  to: the rail is built from `cats` but the menus use a separate `mobileCats` slice, and
+  by that point the two hold different objects, so a shared entry must be edited in
+  both. It fails the build if a name no longer matches.
 - `CARD_FIXES` renames the five category cards and, where needed, repoints them. These
   cannot be document-wide replacements — "Saw Blades" appears 13 times across the page
   and "Shear Blades" 10, in menus and category rails that keep their own wording — so

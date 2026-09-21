@@ -154,6 +154,51 @@ for (const [list, items] of Object.entries(ADDITIONS)) {
   model[list] = model[list].concat(items);
 }
 
+/* ---------- entries changed after the handoff was exported ---------- *
+ *
+ * Each edit names the lists it applies to rather than searching the whole model: the
+ * "Shop by category" rail is built from `cats`, but the mobile order is a separate
+ * `mobileCats` slice taken inside renderVals, and by this point the two hold different
+ * objects — so an entry that appears in both has to be edited in both or the change
+ * only lands on one layout. Names like "Tree Care" also occur in unrelated lists
+ * (services, shopIndustries) that must not be touched.
+ */
+const EDITS = [
+  {
+    lists: ["cats", "mobileCats"],
+    find: "Serrated Tape Knives",
+    set: {
+      name: "Bindery Supplies & Accessories",
+      img: "uploads/bindery-supplies-accessories.jpg",
+      href: "https://lagrinding.com/product-category/la-grinding-catalog/?swoof=1&paged=1&product_cat=bindery-supplies-accessories&really_curr_tax=817-product_cat"
+    }
+  },
+  {
+    // The photo filed under Serrated Tape Knives is, as its filename says, the tree care
+    // one; it moves to the Tree Care card. Title and link there are unchanged.
+    lists: ["cats", "mobileCats"],
+    find: "Tree Care",
+    // %20 as the handoff writes it: the file really does have a space in its name.
+    set: { img: "uploads/tree%20care.png" }
+  }
+];
+
+for (const { lists, find, set } of EDITS) {
+  let hits = 0;
+  for (const list of lists) {
+    if (!Array.isArray(model[list])) {
+      throw new Error(`Edit is stale: the design no longer has a "${list}" list`);
+    }
+    for (const entry of model[list]) {
+      if (entry && entry.name === find) {
+        Object.assign(entry, set);
+        hits += 1;
+      }
+    }
+  }
+  if (hits === 0) throw new Error(`Edit is stale: no entry named "${find}" in ${lists.join(", ")}`);
+}
+
 export const data = model;
 
 /** The names the template may bind as handlers — every function renderVals returns. */

@@ -324,6 +324,69 @@
     }, STEP_MS);
   })();
 
+  /* ---------- mobile: Our Services becomes a rail ---------- */
+
+  /**
+   * Below 640px the five service cards stop stacking and become a swipeable rail with
+   * the same mechanics as "Shop by category": scroll-snap, touch swipe, and a pair of
+   * round arrow buttons in the section header.
+   *
+   * The buttons are cloned from that section's own pair rather than rebuilt, so they
+   * carry its exact markup, inline styling and hover class. They are created only when
+   * the page is actually narrow, which keeps the desktop DOM identical to the handoff.
+   */
+  (function () {
+    if (!window.matchMedia) return;
+    var mq = window.matchMedia("(max-width: 640px)");
+
+    var section = document.querySelector('[data-screen-label="Our Services"]');
+    var card = section && section.querySelector("a.blueprint");
+    var rail = card && card.parentElement;
+    var header = rail && rail.previousElementSibling;
+    if (!rail || !header) return;
+
+    var nav = null;
+
+    // One card per press, which is what the rail's snap points line up with.
+    function step(direction) {
+      var first = rail.firstElementChild;
+      if (!first) return;
+      var gap = parseFloat(getComputedStyle(rail).columnGap) || 0;
+      rail.scrollBy({ left: direction * (first.getBoundingClientRect().width + gap), behavior: "smooth" });
+    }
+
+    function build() {
+      if (nav) return;
+      var source = document.querySelector('[data-on-click="scrollCatsLeft"]');
+      if (!source || !source.parentElement) return;
+
+      nav = source.parentElement.cloneNode(true);
+      nav.className = "m-rail-nav";
+      var buttons = nav.querySelectorAll("button");
+      if (buttons.length < 2) { nav = null; return; }
+
+      [["Previous services", -1], ["Next services", 1]].forEach(function (pair, i) {
+        var button = buttons[i];
+        // The clone carries the category rail's hooks; they must not fire here.
+        button.removeAttribute("data-on-click");
+        button.setAttribute("aria-label", pair[0]);
+        button.addEventListener("click", function () { step(pair[1]); });
+      });
+
+      header.appendChild(nav);
+    }
+
+    function sync() {
+      var narrow = mq.matches;
+      if (narrow) build();
+      if (nav) nav.hidden = !narrow;
+      rail.classList.toggle("m-rail", narrow);
+    }
+
+    sync();
+    window.addEventListener("resize", sync);
+  })();
+
   /* ---------- viewport changes ---------- */
 
   // The drawer only exists below the desktop breakpoint; collapse it on resize past it.

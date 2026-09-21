@@ -138,6 +138,7 @@ What it changes, and why:
 | Hero plates | Swapped for mobile variants whose US flag clears the slider arrow |
 | Hero slide 4 | The nine-item services list is dropped from the mobile sequence |
 | Category grid | Two feature cards over three support cards, all five above the fold |
+| Our Services | Becomes a swipeable rail with arrows, matching Shop by category |
 | About Us | Contains the overflowing photo and rebuilds the OEM logo grid |
 
 Two of those need more than CSS:
@@ -153,6 +154,14 @@ separated from it, the texture rebuilt at the taller height (stretching only the
 between the red bars, so the bars keep their thickness), and the artwork pasted back
 unscaled — with the flag moved to 10.5%, clear of the arrow on both sides. Re-run it
 with `node tools/make-mobile-plates.mjs` if either source plate changes.
+
+**The Our Services rail.** Stacked, the five service cards run to several screens on a
+phone, so below 640px they become a horizontal rail with the same mechanics as the
+"Shop by category" row: scroll-snap, swipe, and a pair of round arrow buttons in the
+section header. `site.js` clones those buttons from that section rather than rebuilding
+them, so they carry its exact markup, inline styling and hover class, and it creates
+them only while the viewport is actually narrow — which is what keeps the desktop DOM
+identical to the handoff.
 
 **Dropping slide 4.** CSS hides the slide and narrows the track from five panels to
 four, so no gap is left behind. `assets/js/site.js` counts the panels that are actually

@@ -133,6 +133,16 @@ const ADDITIONS = {
       name: "Mulcher Teeth — OEM-Compatible Kits & Replacement Parts",
       img: "uploads/mulcher-teeth-featured.jpg",
       href: "https://lagrinding.com/shop/?swoof=1&product_cat=mulcher-teeth"
+    },
+    /* The card has two text slots — an eyebrow and a name — not three, so the product
+     * and its description share the name field with an em dash, which is the pattern
+     * the design's own cards already use ("Brush Chipper Knives — precision ground OEM
+     * match", "Stump Grinder Teeth — replacement options"). */
+    {
+      cat: "Granulators – Recycling and Plastics",
+      name: "Granulators — Compatible Screens",
+      img: "uploads/granulator-screens-featured.png",
+      href: "https://lagrinding.com/product-category/granulators/"
     }
   ]
 };

@@ -98,6 +98,12 @@ the design, rebuild, and the content follows automatically.
 - a handler or ref that `assets/js/site.js` does not implement
 - an `<img data-src>` that would render blank
 - a referenced image missing from `assets/uploads/`
+- a copy correction whose source text is no longer in the design
+
+That last one covers `COPY_FIXES` in `tools/build.mjs`: wording changed after the
+handoff was exported is corrected at build time rather than by editing `design-source/`,
+so that folder stays a faithful record of what Claude Design produced. Currently it
+drops the "/ Reno" qualifier from the Saw Blades category card.
 
 ---
 

@@ -335,6 +335,20 @@ for (const name of new Set(boundRefs)) {
   }
 }
 
+/* Copy corrections applied on top of the handoff, so design-source/ stays a faithful
+ * record of what Claude Design exported. Each one fails the build if its text is no
+ * longer present, rather than silently going stale when the design is re-exported. */
+const COPY_FIXES = [
+  // The "/ Reno" qualifier was dropped from the Saw Blades category card.
+  ["Saw Blades / Reno", "Saw Blades"]
+];
+for (const [from, to] of COPY_FIXES) {
+  if (!body.includes(from)) {
+    throw new Error(`Copy fix is stale: "${from}" no longer appears in the design`);
+  }
+  body = body.replaceAll(from, to);
+}
+
 const leftoverExpr = body.match(/\{\{[^}]*\}\}/);
 if (leftoverExpr) throw new Error(`Unresolved template expression: ${leftoverExpr[0]}`);
 const leftoverTag = body.match(/<sc-[a-z]+/);

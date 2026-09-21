@@ -199,6 +199,21 @@ for (const { lists, find, set } of EDITS) {
   if (hits === 0) throw new Error(`Edit is stale: no entry named "${find}" in ${lists.join(", ")}`);
 }
 
+/* The distributor strip on the homepage shows manufacturer logos only — no names, no
+ * product counts. They are the first fifteen of the design's own `brands` list, which
+ * already carries each one's logo and its destination URL, so nothing is duplicated or
+ * invented here. */
+const STRIP_BRANDS = [
+  "Freud", "Diablo", "Wysong & Miles", "Accurshear", "Pexto",
+  "Tennsmith", "Niagara", "Roper Whitney", "Di-Acro Elga", "Atlantic/Haco",
+  "Famco", "Amada", "Pearson", "Summit", "Durma"
+];
+model.distributorBrands = STRIP_BRANDS.map((name) => {
+  const brand = model.brands.find((b) => b.name === name);
+  if (!brand) throw new Error(`Distributor strip: the design has no brand named "${name}"`);
+  return brand;
+});
+
 export const data = model;
 
 /** The names the template may bind as handlers — every function renderVals returns. */

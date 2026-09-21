@@ -278,9 +278,57 @@ const pageStyles = section(helmet, "<style>", "</style>");
 // Everything after </helmet> up to </x-dc> is the artboard markup.
 const template = section(source, "</helmet>", "</x-dc>");
 
+/* ---------- template patches ---------- *
+ *
+ * Applied to the handoff's dc markup before the dialect is resolved, for changes that
+ * data alone cannot express. Like the copy and card fixes, they live here so that
+ * design-source/ stays a faithful record of what Claude Design exported, and each one
+ * fails the build if the markup it expects is gone.
+ */
+const TEMPLATE_PATCHES = [
+  {
+    why: "The distributor strip shows manufacturer logos only — no names, no product " +
+         "counts — drawn from the design's own brand list so each keeps its existing " +
+         "destination. The cells become links and pick up the brand cards' hover.",
+    from:
+      '        <sc-for list="{{ brandLogos }}" as="l" hint-placeholder-count="18">\n' +
+      '          <div style="background: #ffffff; height: 108px; display: flex; align-items: center; justify-content: center; padding: 16px">\n' +
+      '            <img data-src="{{ l.img }}" alt="{{ l.name }}" style="max-width: 100%; max-height: 62px; width: auto; height: auto; object-fit: contain; filter: grayscale(1); opacity: 0.75" style-hover="filter: none; opacity: 1">\n' +
+      '          </div>\n' +
+      '        </sc-for>',
+    to:
+      '        <sc-for list="{{ distributorBrands }}" as="b" hint-placeholder-count="15">\n' +
+      // The <div> stays: every responsive rule for this strip is written against
+      // `#page .logos > div`, so replacing it with the link would break all of them.
+      '          <div style="position: relative; background: #ffffff; height: 108px; display: flex; align-items: center; justify-content: center; padding: 16px">\n' +
+      // inset:0 makes the whole cell clickable, including its padding; padding:inherit
+      // keeps the logo inset by whatever the responsive rules give the cell.
+      '            <a class="logo-link" href="{{ b.href }}" aria-label="{{ b.name }}" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: inherit">\n' +
+      '              <img data-src="{{ b.logo }}" alt="{{ b.name }}" style="max-width: 100%; max-height: 62px; width: auto; height: auto; object-fit: contain">\n' +
+      '            </a>\n' +
+      '          </div>\n' +
+      '        </sc-for>'
+  },
+  {
+    why: "Fifteen logos divide evenly into five columns, so the strip no longer ends " +
+         "on a part-empty row the way nine columns left it.",
+    from: '<div class="g-mob-3 logos" style="display: grid; grid-template-columns: repeat(9, 1fr);',
+    to:   '<div class="g-mob-3 logos" style="display: grid; grid-template-columns: repeat(5, 1fr);'
+  }
+];
+
+let patched = template;
+for (const { from, to, why } of TEMPLATE_PATCHES) {
+  const hits = patched.split(from).length - 1;
+  if (hits !== 1) {
+    throw new Error(`Template patch matched ${hits} times, expected 1 — ${why}`);
+  }
+  patched = patched.replace(from, to);
+}
+
 const sheet = new StyleSheet();
 
-let body = expandDirectives(template, {});
+let body = expandDirectives(patched, {});
 body = lowerInteractions(body, sheet);
 
 // The canvas thumbnail is editor chrome, not page content.
@@ -427,7 +475,17 @@ await mkdir(join(OUT, "assets", "css"), { recursive: true });
 await cp(join(ROOT, "assets"), join(OUT, "assets"), { recursive: true });
 await cp(DESIGN_SYSTEM, join(OUT, "assets", "css", "design-system.css"));
 
-await writeFile(join(OUT, "assets", "css", "site.css"), sheet.toCss(), "utf8");
+/* Hover for the distributor strip's logo cells, matching the brand cards: the greyscale
+ * lifts and the cell tints. Written here rather than in desktop.css or mobile.css
+ * because it applies at every width, and those two are deliberately scoped. */
+const STRIP_CSS = `
+/* Distributor strip — logo cells are links (see TEMPLATE_PATCHES in tools/build.mjs). */
+.logo-link img { filter: grayscale(1); opacity: 0.75; transition: filter 200ms ease, opacity 200ms ease; }
+.logo-link:hover img, .logo-link:active img, .logo-link:focus-visible img { filter: none; opacity: 1; }
+.logo-link:hover, .logo-link:focus-visible { background: #F2F2F3; }
+`;
+
+await writeFile(join(OUT, "assets", "css", "site.css"), sheet.toCss() + STRIP_CSS, "utf8");
 
 const document = `<!DOCTYPE html>
 <html lang="en">

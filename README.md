@@ -123,6 +123,10 @@ what Claude Design produced.
   to: the rail is built from `cats` but the menus use a separate `mobileCats` slice, and
   by that point the two hold different objects, so a shared entry must be edited in
   both. It fails the build if a name no longer matches.
+- `TEMPLATE_PATCHES` in `tools/build.mjs` rewrites the handoff's dc markup before the
+  dialect is resolved, for changes data alone cannot express — currently the distributor
+  strip, whose cells became links around manufacturer logos. Each patch fails the build
+  if the markup it expects is gone.
 - `CARD_FIXES` renames the five category cards and, where needed, repoints them. These
   cannot be document-wide replacements — "Saw Blades" appears 13 times across the page
   and "Shear Blades" 10, in menus and category rails that keep their own wording — so

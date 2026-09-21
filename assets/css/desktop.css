@@ -1,0 +1,64 @@
+/*
+ * Desktop-only corrections, on top of the design handoff.
+ *
+ * EVERY rule in this file lives inside `@media (min-width: 1024px)` — the range in
+ * which the desktop layout is active. Below that the handoff's own tablet rules take
+ * over (and hide the element this file corrects), so nothing here can reach the tablet
+ * or mobile layouts, which are signed off separately.
+ *
+ * Loaded after page.css, so plain specificity is usually enough; the handoff sets this
+ * geometry inline, so `!important` is needed to reach it.
+ */
+
+@media (min-width: 1024px) {
+
+  /* ---------------------------------------------------------------- *
+   * ABOUT US — the navy wedge keeps its shape at every width
+   * ---------------------------------------------------------------- */
+
+  /* The About Us section scales with the viewport: it is `aspect-ratio: 1897 / 840`
+   * with `container-type: inline-size`, so at any width it is a clean scale of its
+   * artboard. The navy wedge inside it, however, is positioned and sized in fixed
+   * pixels — left 555, top 172, width 953, height 551 — so it does NOT scale, and its
+   * size relative to the section changes with every resize:
+   *
+   *     viewport   wedge spans          result
+   *     1280       43.4%–117.8%         floods the section, diagonal far too steep
+   *     1440       38.8%–105.3%         correct: bleeds just past the right and bottom
+   *     1897       29.3%–79.5%          floats mid-section, badges land outside it
+   *
+   * The wedge is designed to bleed off the right and bottom edges — that bleed is what
+   * makes it read as a corner wedge rather than a floating rectangle — so the fix is
+   * not to scale it to the artboard, which would pull it inside the section and break
+   * it the way 1897 does. Instead the geometry is frozen as percentages of the section
+   * at the width where it is right (1440), which the fixed-aspect section then carries
+   * to every other width unchanged: the same 5.3% bleed to the right, the same 14%
+   * below, the same diagonal, the badges always sitting on navy.
+   *
+   * The clip-path is already in percentages, so it follows the element exactly. */
+  #page .about-wedge {
+    left: 38.7570% !important;    /* 555 / 1432 */
+    width: 66.5503% !important;   /* 953 / 1432 */
+    top: 27.1293% !important;     /* 172 / 634  */
+    height: 86.9085% !important;  /* 551 / 634  */
+  }
+
+  /* The badges are anchored to the section's right edge with a fixed 17.4px, which
+   * drifts out of proportion for the same reason. */
+  #page .about-badges {
+    right: 1.2151% !important;    /* 17.4 / 1432 */
+  }
+
+  /* The badge type and icons scale with `cqw`, but their clamps top out at 82px and
+   * 30px — reached at roughly 1950px and 2110px wide. Past those points the wedge keeps
+   * growing while its contents do not, so the block looks increasingly empty on large
+   * monitors. Raising the ceilings keeps the scaling continuous to ~2560px and changes
+   * nothing below ~1950px, where the clamps were never at their limit. */
+  #page .about-badges svg {
+    width: clamp(46px, 4.2cqw, 110px) !important;
+    height: clamp(46px, 4.2cqw, 110px) !important;
+  }
+  #page .about-badges span {
+    font-size: clamp(17px, 1.42cqw, 40px) !important;
+  }
+}

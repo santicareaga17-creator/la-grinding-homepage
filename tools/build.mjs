@@ -414,6 +414,8 @@ const document = `<!DOCTYPE html>
 <link rel="stylesheet" href="assets/css/design-system.css">
 <link rel="stylesheet" href="assets/css/page.css">
 <link rel="stylesheet" href="assets/css/site.css">
+<!-- Desktop-only corrections; every rule is inside @media (min-width: 1024px). -->
+<link rel="stylesheet" href="assets/css/desktop.css">
 <!-- Mobile-only refinements; every rule is inside @media (max-width: 640px). -->
 <link rel="stylesheet" href="assets/css/mobile.css">
 </head>

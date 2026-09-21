@@ -48,6 +48,7 @@ design-source/                   the Claude Design handoff — the source of tru
   support.js                       the editor's React runtime (reference only, never shipped)
   _ds/industry-…/styles.css        the design system stylesheet
 assets/
+  css/desktop.css                  desktop-only fix, all inside @media min-width 1024px
   css/mobile.css                   mobile-only refinements, all inside @media 640px
   js/site.js                       all page behaviour (no framework)
   uploads/                         100 images, copied out of the handoff
@@ -127,6 +128,33 @@ Because the desktop floor is 1280px and the responsive rules only start at 1023p
 viewport between **1024px and 1279px scrolls horizontally**. That is the design's own
 behaviour, verified against the handoff at both widths, and it is reproduced rather than
 corrected — changing it would be a redesign.
+
+### The desktop layer
+
+`assets/css/desktop.css` holds one correction, inside a single
+`@media (min-width: 1024px)` block: the About Us navy wedge.
+
+The section scales with the viewport — `aspect-ratio: 1897 / 840` with
+`container-type: inline-size` — but the wedge inside it is positioned and sized in fixed
+pixels, so it does not scale, and its size relative to the section changes with every
+resize:
+
+| Viewport | Wedge spans | Result |
+| --- | --- | --- |
+| 1280 | 43.4%–117.8% | floods the section, diagonal far too steep |
+| 1440 | 38.8%–105.3% | correct: bleeds just past the right and bottom edges |
+| 1897 | 29.3%–79.5% | floats mid-section, badges land outside it |
+
+The wedge is *designed* to bleed off the right and bottom edges — that bleed is what
+makes it read as a corner wedge rather than a floating rectangle — so scaling it to the
+1897px artboard is not the fix; that pulls it inside the section and breaks it the way
+1897 already does. Instead its geometry is frozen as percentages of the section taken at
+the width where it is right (1440), which the fixed-aspect section then carries
+unchanged to every other width. Measured at 1024, 1280, 1440, 1600, 1897 and 2560, the
+wedge now spans an identical 38.76%–105.31% by 27.13%–114.03% at every one.
+
+Toggling the sheet on and off at 1440px changes exactly two of the page's 2025 elements:
+the wedge and the badge row. Nothing else on desktop moves.
 
 ### The mobile layer
 

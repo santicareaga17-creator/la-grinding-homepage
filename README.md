@@ -100,10 +100,16 @@ the design, rebuild, and the content follows automatically.
 - a referenced image missing from `assets/uploads/`
 - a copy correction whose source text is no longer in the design
 
-That last one covers `COPY_FIXES` in `tools/build.mjs`: wording changed after the
-handoff was exported is corrected at build time rather than by editing `design-source/`,
-so that folder stays a faithful record of what Claude Design produced. Currently it
-drops the "/ Reno" qualifier from the Saw Blades category card.
+That last one covers `COPY_FIXES` and `LINK_FIXES` in `tools/build.mjs`: wording and
+destinations changed after the handoff was exported are corrected at build time rather
+than by editing `design-source/`, so that folder stays a faithful record of what Claude
+Design produced. Currently they drop the "/ Reno" qualifier from the Saw Blades card and
+point the Sharpening Support card at `lagrinding.com/sharpening/`.
+
+`LINK_FIXES` finds its card by the image's `alt` text rather than by the href it is
+replacing, because several unrelated links on the page share that href — a blanket
+replacement would move those too. It fails the build if the card is missing or if the
+`alt` matches more than once.
 
 ---
 

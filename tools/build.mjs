@@ -349,6 +349,28 @@ for (const [from, to] of COPY_FIXES) {
   body = body.replaceAll(from, to);
 }
 
+/* Destination corrections for the category cards. These are targeted by the card's own
+ * image alt text rather than by their current href, because several unrelated links on
+ * the page point at the same category and a blanket replacement would move those too. */
+const LINK_FIXES = [
+  // Sharpening Support pointed at the brush chipper knives category.
+  ["Sharpening Support", "https://lagrinding.com/sharpening/"]
+];
+const CARD_OPEN = '<a class="panel-card" href="';
+for (const [card, href] of LINK_FIXES) {
+  const marker = `alt="${card}"`;
+  const at = body.indexOf(marker);
+  if (at === -1) throw new Error(`Link fix is stale: no card with ${marker}`);
+  if (body.indexOf(marker, at + 1) !== -1) {
+    throw new Error(`Link fix is ambiguous: ${marker} appears more than once`);
+  }
+  const open = body.lastIndexOf(CARD_OPEN, at);
+  if (open === -1) throw new Error(`Link fix: no panel card wraps ${marker}`);
+  const start = open + CARD_OPEN.length;
+  const end = body.indexOf('"', start);
+  body = body.slice(0, start) + href + body.slice(end);
+}
+
 const leftoverExpr = body.match(/\{\{[^}]*\}\}/);
 if (leftoverExpr) throw new Error(`Unresolved template expression: ${leftoverExpr[0]}`);
 const leftoverTag = body.match(/<sc-[a-z]+/);

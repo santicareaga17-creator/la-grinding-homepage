@@ -153,6 +153,12 @@ the width where it is right (1440), which the fixed-aspect section then carries
 unchanged to every other width. Measured at 1024, 1280, 1440, 1600, 1897 and 2560, the
 wedge now spans an identical 38.76%–105.31% by 27.13%–114.03% at every one.
 
+The wedge is also stepped right, from the handoff's 38.757% to 43%. At the handoff
+position the navy's leftmost tip lands at 39.9% while the OEM logo grid's right-hand
+column runs to 42.2%, so the Carlton logo sat on navy — by 73px at 1440. At 43% the tip
+is at 44.1%, measured clear of the headline, the OEM heading, the brand list and all
+eight logos at every width.
+
 Toggling the sheet on and off at 1440px changes exactly two of the page's 2025 elements:
 the wedge and the badge row. Nothing else on desktop moves.
 

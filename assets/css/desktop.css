@@ -37,7 +37,14 @@
    *
    * The clip-path is already in percentages, so it follows the element exactly. */
   #page .about-wedge {
-    left: 38.7570% !important;    /* 555 / 1432 */
+    /* 38.757% is where the handoff puts it (555 / 1432). At that position the navy's
+     * leftmost tip lands at 39.9%, while the OEM logo grid's right-hand column runs to
+     * 42.2% — so the Carlton logo sat on navy, by 73px at 1440. Stepping the wedge to
+     * 43% puts the tip at 44.1%, clear of every element in the copy column with room to
+     * spare, and takes a little navy off the top of the diagonal at the same time.
+     * Measured against the headline, the OEM heading, the brand list and all eight
+     * logos: the intrusion is zero from 42% onwards. */
+    left: 43% !important;
     width: 66.5503% !important;   /* 953 / 1432 */
     top: 27.1293% !important;     /* 172 / 634  */
     height: 86.9085% !important;  /* 551 / 634  */

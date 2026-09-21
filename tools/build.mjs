@@ -352,26 +352,52 @@ for (const [from, to] of COPY_FIXES) {
   body = body.replaceAll(from, to);
 }
 
-/* Destination corrections for the category cards. These are targeted by the card's own
- * image alt text rather than by their current href, because several unrelated links on
- * the page point at the same category and a blanket replacement would move those too. */
-const LINK_FIXES = [
-  // Sharpening Support pointed at the brush chipper knives category.
-  ["Sharpening Support", "https://lagrinding.com/sharpening/"]
+/* Corrections to the five category cards: their label, and where they point.
+ *
+ * Each card is found by the alt text it currently carries, and only the markup inside
+ * that one <a class="panel-card"> … </a> is rewritten. A blanket replacement is not an
+ * option here: "Saw Blades" appears 13 times across the page and "Shear Blades" 10, in
+ * menus and category lists that must keep their own wording.
+ *
+ * `label` renames both the visible heading and the image's alt, so the link is
+ * announced consistently; `href` is optional and only set where the destination was
+ * also wrong. Nothing about the imagery changes. */
+const CARD_FIXES = [
+  { find: "Shear Blades",                    label: "Printing & Binding" },
+  { find: "Granulator Knives & Screens",     label: "Granulators / Recycling & Plastics" },
+  { find: "Saw Blades",                      label: "Diablo & Freud Parts" },
+  // Sharpening Support also pointed at the brush chipper knives category.
+  { find: "Sharpening Support",              label: "Sharpening",
+    href: "https://lagrinding.com/sharpening/" }
 ];
-const CARD_OPEN = '<a class="panel-card" href="';
-for (const [card, href] of LINK_FIXES) {
-  const marker = `alt="${card}"`;
-  const at = body.indexOf(marker);
-  if (at === -1) throw new Error(`Link fix is stale: no card with ${marker}`);
-  if (body.indexOf(marker, at + 1) !== -1) {
-    throw new Error(`Link fix is ambiguous: ${marker} appears more than once`);
+
+/* Matched by walking the panel cards themselves: the same alt text also appears in the
+ * mega-menu and the category rails, so searching the whole document would be ambiguous
+ * (and the build refuses rather than guess — that is how this was caught). */
+const cardRe = /<a class="panel-card" href="([^"]*)"[\s\S]*?<\/a>/g;
+const applied = new Map(CARD_FIXES.map((f) => [f.find, 0]));
+
+body = body.replace(cardRe, (block, currentHref) => {
+  const altMatch = block.match(/\salt="([^"]*)"/);
+  if (!altMatch) return block;
+  const fix = CARD_FIXES.find((f) => escapeHtml(f.find) === altMatch[1]);
+  if (!fix) return block;
+
+  applied.set(fix.find, applied.get(fix.find) + 1);
+  const label = escapeHtml(fix.label);
+
+  let out = block.replace(altMatch[0], ` alt="${label}"`);
+  if (fix.href) out = out.replace(`href="${currentHref}"`, `href="${fix.href}"`);
+
+  const headRe = /(<span class="panel-head"[^>]*>)[^<]*(<\/span>)/;
+  if (!headRe.test(out)) throw new Error(`Card fix: no heading in the card for "${fix.find}"`);
+  return out.replace(headRe, `$1${label}$2`);
+});
+
+for (const [find, count] of applied) {
+  if (count !== 1) {
+    throw new Error(`Card fix for "${find}" matched ${count} cards, expected exactly 1`);
   }
-  const open = body.lastIndexOf(CARD_OPEN, at);
-  if (open === -1) throw new Error(`Link fix: no panel card wraps ${marker}`);
-  const start = open + CARD_OPEN.length;
-  const end = body.indexOf('"', start);
-  body = body.slice(0, start) + href + body.slice(end);
 }
 
 const leftoverExpr = body.match(/\{\{[^}]*\}\}/);

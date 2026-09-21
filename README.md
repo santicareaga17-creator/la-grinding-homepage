@@ -101,17 +101,20 @@ the design, rebuild, and the content follows automatically.
 - a referenced image missing from `assets/uploads/`
 - a copy correction whose source text is no longer in the design
 
-That last one covers `COPY_FIXES` and `LINK_FIXES` in `tools/build.mjs`: wording and
-destinations changed after the handoff was exported are corrected at build time rather
-than by editing `design-source/`, so that folder stays a faithful record of what Claude
-Design produced. Currently they drop the "/ Reno" qualifier from the Saw Blades card,
-change the Commercial Orders coverage line to nationwide, and point the Sharpening
-Support card at `lagrinding.com/sharpening/`.
+That last one covers `COPY_FIXES` and `CARD_FIXES` in `tools/build.mjs`: wording,
+labels and destinations changed after the handoff was exported are corrected at build
+time rather than by editing `design-source/`, so that folder stays a faithful record of
+what Claude Design produced.
 
-`LINK_FIXES` finds its card by the image's `alt` text rather than by the href it is
-replacing, because several unrelated links on the page share that href — a blanket
-replacement would move those too. It fails the build if the card is missing or if the
-`alt` matches more than once.
+- `COPY_FIXES` rewrites text across the document. It is only safe for strings that are
+  unique, so each one is chosen to be: `"across California, Nevada and Arizona."` keeps
+  its leading `across` because three other places name the same three states and must
+  keep doing so.
+- `CARD_FIXES` renames the five category cards and, where needed, repoints them. These
+  cannot be document-wide replacements — "Saw Blades" appears 13 times across the page
+  and "Shear Blades" 10, in menus and category rails that keep their own wording — so
+  the build walks the `<a class="panel-card">` blocks and rewrites only inside the one
+  card whose image `alt` matches. It fails if a fix matches no card or more than one.
 
 ---
 

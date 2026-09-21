@@ -130,7 +130,7 @@ const ADDITIONS = {
   featured: [
     {
       cat: "Tree Care",
-      name: "Mulcher Teeth",
+      name: "Mulcher Teeth — OEM-Compatible Kits & Replacement Parts",
       img: "uploads/mulcher-teeth-featured.jpg",
       href: "https://lagrinding.com/shop/?swoof=1&product_cat=mulcher-teeth"
     }

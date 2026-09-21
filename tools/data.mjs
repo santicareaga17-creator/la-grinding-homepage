@@ -114,7 +114,37 @@ function plain(value) {
   return out;
 }
 
-export const data = plain(rawVals);
+const model = plain(rawVals);
+
+/* ---------- content added after the handoff was exported ---------- *
+ *
+ * Kept here rather than edited into design-source/, so that folder stays a faithful
+ * record of what Claude Design produced — the same reason tools/build.mjs carries its
+ * COPY_FIXES and CARD_FIXES. Each addition names the list it extends and the build
+ * fails if the design no longer has that list, so this cannot go stale unnoticed.
+ */
+const ADDITIONS = {
+  // A fourth card in "Shop featured products". The card markup is the design's own, so
+  // it picks up the same size, spacing, type, hover and arrow behaviour as the rest;
+  // only the content is new. "View product" is hard-coded in the template, not here.
+  featured: [
+    {
+      cat: "Tree Care",
+      name: "Mulcher Teeth",
+      img: "uploads/mulcher-teeth-featured.jpg",
+      href: "https://lagrinding.com/shop/?swoof=1&product_cat=mulcher-teeth"
+    }
+  ]
+};
+
+for (const [list, items] of Object.entries(ADDITIONS)) {
+  if (!Array.isArray(model[list])) {
+    throw new Error(`Addition is stale: the design no longer has a "${list}" list`);
+  }
+  model[list] = model[list].concat(items);
+}
+
+export const data = model;
 
 /** The names the template may bind as handlers — every function renderVals returns. */
 export const handlerNames = new Set(

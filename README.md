@@ -110,6 +110,11 @@ what Claude Design produced.
   unique, so each one is chosen to be: `"across California, Nevada and Arizona."` keeps
   its leading `across` because three other places name the same three states and must
   keep doing so.
+- `ADDITIONS` in `tools/data.mjs` extends a list the design defines — currently a
+  fourth "Shop featured products" card (Tree Care / Mulcher Teeth). The card markup is
+  the design's own, so an added entry inherits the existing size, spacing, type, hover
+  and arrow behaviour; only the content is new. The build fails if the design no longer
+  has the list being extended.
 - `CARD_FIXES` renames the five category cards and, where needed, repoints them. These
   cannot be document-wide replacements — "Saw Blades" appears 13 times across the page
   and "Shear Blades" 10, in menus and category rails that keep their own wording — so

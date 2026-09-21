@@ -130,12 +130,27 @@
     var track = byRef("trackRef");
     if (!slider || !track) return;
 
-    var SLIDES = 4;          // real slides; index 4 is the clone
-    var STEP = 20;           // one slide is 20% of the 500% track
     var AUTO_MS = 12000;     // the design's auto-advance interval
     var ANIM_MS = 600;       // transition duration
     var SNAP_MS = 640;       // when the clone is swapped back for slide 0
     var EASE = "transform 600ms cubic-bezier(0.4, 0, 0.2, 1)";
+
+    /* The slide count is read from the DOM rather than hard-coded, because mobile.css
+     * hides one slide below 640px. Panels = what is actually laid out; the last one is
+     * the trailing copy of the first, so the real slides are one fewer, and a panel is
+     * worth 100/panels percent of the track. */
+    var SLIDES = 0;
+    var STEP = 0;
+
+    function measure() {
+      var panels = 0;
+      for (var i = 0; i < track.children.length; i += 1) {
+        if (getComputedStyle(track.children[i]).display !== "none") panels += 1;
+      }
+      panels = Math.max(panels, 2);
+      SLIDES = panels - 1;
+      STEP = 100 / panels;
+    }
 
     var index = 0;
     var busy = false;
@@ -178,8 +193,25 @@
     actions.prevSlide = function () { go(index - 1); restartAuto(); };
     actions.nextSlide = function () { go(index + 1); restartAuto(); };
 
-    apply();
+    measure();
+    apply(false);
     restartAuto();
+
+    /* Crossing the 640px breakpoint changes how many slides there are, so re-measure
+     * and return to the first slide rather than leaving the track on an offset that no
+     * longer lines up. */
+    var wasNarrow = window.matchMedia("(max-width: 640px)").matches;
+    window.addEventListener("resize", function () {
+      var narrow = window.matchMedia("(max-width: 640px)").matches;
+      if (narrow === wasNarrow) return;
+      wasNarrow = narrow;
+      clearTimeout(snapTimer);
+      busy = false;
+      measure();
+      index = 0;
+      apply(false);
+      restartAuto();
+    });
 
     /* Touch: a mostly-horizontal drag of more than 45px changes slide. */
     var startX = 0;

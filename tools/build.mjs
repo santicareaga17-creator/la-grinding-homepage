@@ -378,6 +378,8 @@ const document = `<!DOCTYPE html>
 <link rel="stylesheet" href="assets/css/design-system.css">
 <link rel="stylesheet" href="assets/css/page.css">
 <link rel="stylesheet" href="assets/css/site.css">
+<!-- Mobile-only refinements; every rule is inside @media (max-width: 640px). -->
+<link rel="stylesheet" href="assets/css/mobile.css">
 </head>
 <body>
 ${body.trim()}

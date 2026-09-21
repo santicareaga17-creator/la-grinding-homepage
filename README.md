@@ -48,12 +48,14 @@ design-source/                   the Claude Design handoff — the source of tru
   support.js                       the editor's React runtime (reference only, never shipped)
   _ds/industry-…/styles.css        the design system stylesheet
 assets/
+  css/mobile.css                   mobile-only refinements, all inside @media 640px
   js/site.js                       all page behaviour (no framework)
   uploads/                         100 images, copied out of the handoff
 tools/
   build.mjs                        the compiler: handoff -> dist/
   data.mjs                         executes the design's renderVals() to get page data
   sync-assets.mjs                  copies the referenced images out of the handoff
+  make-mobile-plates.mjs           draws the taller mobile hero plates
   serve.mjs                        local static server
 dist/                            build output — generated, gitignored
 ```
@@ -114,9 +116,56 @@ viewport between **1024px and 1279px scrolls horizontally**. That is the design'
 behaviour, verified against the handoff at both widths, and it is reproduced rather than
 corrected — changing it would be a redesign.
 
-Verified at 1440, 1280, 1024, 1023, 768, 430, 393 and 375: no broken images, no clipped
-text beyond the design's own 2-line clamp on long product names, and no horizontal
-scroll outside the 1024–1279 band described above.
+### The mobile layer
+
+`assets/css/mobile.css` holds phone-specific refinements requested after the desktop
+design was signed off. **Every rule in it lives inside a single
+`@media (max-width: 640px)` block**, so it cannot reach the tablet tier or the desktop
+layout — that containment is the guarantee that desktop stays approved-as-is, and it is
+verified by re-diffing 1440px against the handoff after every change.
+
+What it changes, and why:
+
+| Area | Change |
+| --- | --- |
+| Hero slider | 40% taller (`2172/411` → `2172/575`); copy scales up to match |
+| Hero plates | Swapped for mobile variants whose US flag clears the slider arrow |
+| Hero slide 4 | The nine-item services list is dropped from the mobile sequence |
+| Category grid | Two feature cards over three support cards, all five above the fold |
+| About Us | Contains the overflowing photo and rebuilds the OEM logo grid |
+
+Two of those need more than CSS:
+
+**The taller plates.** `hero-plate-clean.png` and `min6.png` both carry a small US flag
+about 2.7% from the left edge, which on a phone sits underneath the 22px "previous
+slide" arrow. They also cannot simply be stretched to the taller mobile ratio — the
+plate is a pure gradient and would survive it, but `min6.png` carries the CA/NV/AZ map,
+which must not distort. `tools/make-mobile-plates.mjs` generates
+`hero-plate-mobile.png` and `min6-mobile.png` by exploiting the fact that the plate
+texture is uniform along X: the row median *is* the texture, so the artwork can be
+separated from it, the texture rebuilt at the taller height (stretching only the band
+between the red bars, so the bars keep their thickness), and the artwork pasted back
+unscaled — with the flag moved to 10.5%, clear of the arrow on both sides. Re-run it
+with `node tools/make-mobile-plates.mjs` if either source plate changes.
+
+**Dropping slide 4.** CSS hides the slide and narrows the track from five panels to
+four, so no gap is left behind. `assets/js/site.js` counts the panels that are actually
+laid out rather than assuming five, and re-measures when the viewport crosses 640px, so
+the slider's loop and its trailing clone stay correct in both layouts.
+
+Two defects in the handoff's own mobile CSS are fixed here rather than reproduced,
+because both are plainly bugs rather than design intent:
+
+- `.about-photo` was left at its desktop `856x654px` while its mobile frame is 210px
+  tall, so the photo overflowed by 444px and covered the copy beneath it.
+- `.about-oem-logos` asks for four columns, but the handoff's later
+  `[style*="grid-template-columns"] { grid-template-columns: 1fr }` rule matches at
+  equal specificity and wins, stacking all eight logos in one column.
+
+Verified at 1440, 1280, 1024, 1023, 768, 641, 640, 430, 414, 393, 390, 375 and 360: no
+broken images, no overflowing elements, no clipped text beyond the design's own 2-line
+clamp on long product names, and no horizontal scroll outside the 1024–1279 band
+described above.
 
 ---
 

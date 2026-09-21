@@ -1,0 +1,195 @@
+/*
+ * Mobile-only refinements, on top of the design handoff.
+ *
+ * EVERY rule in this file lives inside `@media (max-width: 640px)` — the design's own
+ * mobile breakpoint. Nothing here can reach the tablet tier (641–1023px) or the desktop
+ * layout, which is approved and must stay exactly as the handoff renders it.
+ *
+ * Loaded after page.css and site.css, so plain specificity is usually enough; the
+ * handoff sets most layout inline, so `!important` is still needed to reach those.
+ *
+ * Contents
+ *   1. Hero slider — 40% taller, flag clear of the arrow, slide 4 dropped
+ *   2. Service category grid — 2 large + 3 compact, all five above the fold
+ *   3. About Us — fixes the overflowing photo and the collapsed OEM grid
+ */
+
+@media (max-width: 640px) {
+
+  /* ---------------------------------------------------------------- *
+   * 1. HERO SLIDER
+   * ---------------------------------------------------------------- */
+
+  /* 40% taller than the handoff's 2172/411, so the copy is not squeezed into a
+   * ~71px band on a phone. The two plate images are swapped for variants drawn at
+   * this exact ratio (tools/make-mobile-plates.mjs), so nothing is stretched or
+   * cropped to achieve it. */
+  #page .hero-track > div {
+    aspect-ratio: 2172 / 575 !important;
+  }
+
+  /* The desktop plates carry the US flag at ~2.7% from the left, which on a phone
+   * lands underneath the 22px "previous slide" arrow. The mobile variants are the
+   * same artwork with the flag moved to 10.5%, which leaves ~13px of clear plate on either side of it
+   * at 375px: the arrow ends at 26px, the flag runs 39-59px, the copy starts at 73px. */
+  #page .hero-track img[src$="hero-plate-clean.png"] {
+    content: url("../uploads/hero-plate-mobile.png");
+  }
+  #page .hero-track img[src$="min6.png"] {
+    content: url("../uploads/min6-mobile.png");
+  }
+
+  /* Slide 4 (the nine-item services list) is unreadable at phone width, so it is
+   * dropped from the mobile sequence entirely. The track narrows from five panels
+   * to four and each panel grows to a quarter, so no gap is left behind.
+   * assets/js/site.js counts the visible panels, so the slider follows suit. */
+  #page .hero-track > div:nth-child(4) {
+    display: none !important;
+  }
+  #page .hero-track {
+    width: 400% !important;
+  }
+  #page .hero-track > div {
+    flex: 0 0 25% !important;
+    width: 25% !important;
+  }
+
+  /* Use the extra height: the copy scales with container width, so it needs its own
+   * step up to stay in proportion with the taller plate. */
+  #page .hero-track .plate-copy,
+  #page .hero-track > div:nth-child(3) > div:nth-child(2) {
+    font-size: clamp(12px, 3.7cqw, 46px) !important;
+  }
+  #page .hero-track > div:nth-child(2) > div:nth-child(2) {
+    font-size: clamp(12px, 4.6cqw, 60px) !important;
+  }
+
+  /* Start the copy clear of the relocated flag (which ends at ~14.1%). */
+  #page .plate-copy,
+  #page .hero-track > div:nth-child(2) > div:nth-child(2),
+  #page .hero-track > div:nth-child(3) > div:nth-child(2) {
+    left: 19.5% !important;
+  }
+
+  /* A slightly larger arrow on the taller bar — still the design's shape and colour,
+   * just an easier tap target than 22px. */
+  #page .hero-slider > button {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * 2. SERVICE CATEGORY GRID
+   * ---------------------------------------------------------------- */
+
+  /* Six columns is the common denominator for a 2-up row over a 3-up row:
+   * the two feature cards span three each, the three support cards span two each. */
+  #page .panel-row.g-mob-2 {
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 6px !important;
+    padding: 0 6px !important;
+  }
+  #page .panel-row > .panel-card:nth-child(1),
+  #page .panel-row > .panel-card:nth-child(2) {
+    grid-column: span 3 !important;
+  }
+  #page .panel-row > .panel-card:nth-child(n + 3) {
+    grid-column: span 2 !important;
+  }
+
+  /* Shorter crops than the desktop 274/500 portrait, so all five rows of imagery and
+   * their titles land inside the first screen. The images still fill their frame and
+   * keep their own crop — only the frame is shorter. */
+  #page .panel-row > .panel-card:nth-child(1) > span:first-child,
+  #page .panel-row > .panel-card:nth-child(2) > span:first-child {
+    aspect-ratio: 274 / 320 !important;
+  }
+  #page .panel-row > .panel-card:nth-child(n + 3) > span:first-child {
+    aspect-ratio: 274 / 300 !important;
+  }
+
+  /* The handoff reserves 86px and 22/26px of padding under each image for a 25px
+   * title. At phone width that is most of a card's height, so the titles tighten up
+   * while staying comfortably readable. */
+  #page .panel-row .panel-head {
+    min-height: 0 !important;
+    padding: 9px 4px 12px !important;
+    font-size: 16px !important;
+    line-height: 1.04 !important;
+  }
+  #page .panel-row > .panel-card:nth-child(n + 3) .panel-head {
+    padding: 8px 2px 10px !important;
+    font-size: 12px !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * 3. ABOUT US
+   * ---------------------------------------------------------------- */
+
+  /* The handoff stacks this section on mobile but leaves the photo at its desktop
+   * 856x654px, so it overflowed its 210px frame by 444px and covered the copy below.
+   * Containing it is what fixes the overlap; the crop keeps the technician and the
+   * blade, which is the part of the frame worth showing on a phone. */
+  #page .about-photo {
+    height: 208px !important;
+    overflow: hidden !important;
+  }
+  #page .about-photo img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: 58% 42% !important;
+  }
+
+  /* A clear light panel for the copy, so nothing sits on busy photography. */
+  #page .about-copy {
+    background: #e7e9eb !important;
+    padding: 28px 18px 30px !important;
+  }
+  #page .about-copy h2 {
+    font-size: 27px !important;
+    line-height: 1.0 !important;
+    margin-top: 16px !important;
+  }
+  #page .about-oem {
+    margin-top: 26px !important;
+  }
+  #page .about-oem > div:first-child {
+    font-size: 27px !important;
+  }
+  #page .about-oem > div:nth-child(2) {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    margin-top: 8px !important;
+    color: #2c3034 !important;
+  }
+
+  /* The handoff asks for a four-column logo grid, but its own
+   * `[style*="grid-template-columns"] { grid-template-columns: 1fr }` rule is declared
+   * later at equal specificity and wins, so all eight logos stacked in one column.
+   * Flex sidesteps that rule entirely and centres the short last row, which a grid
+   * would leave ragged. */
+  #page .about-oem-logos {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 12px 10px !important;
+    margin-top: 18px !important;
+  }
+  #page .about-oem-logos .oem-cell {
+    flex: 0 0 calc(33.333% - 7px) !important;
+    min-height: 46px !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+  }
+  /* Logos keep their own aspect; the box just bounds them, so none is stretched. */
+  #page .about-oem-logos img {
+    max-height: 30px !important;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    opacity: 0.78 !important;
+  }
+}

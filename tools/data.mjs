@@ -206,7 +206,11 @@ for (const { lists, find, set } of EDITS) {
 const STRIP_BRANDS = [
   "Freud", "Diablo", "Wysong & Miles", "Accurshear", "Pexto",
   "Tennsmith", "Niagara", "Roper Whitney", "Di-Acro Elga", "Atlantic/Haco",
-  "Famco", "Amada", "Pearson", "Summit", "Durma"
+  "Famco", "Amada", "Pearson", "Summit", "Durma",
+  // Added after the first fifteen; these complete the design's brand list.
+  // Their display names there are shorter than the logos read: "Dreis & Krump" is the
+  // Chicago Dreis & Krump logo, "Edwards - Besco" the Besco Machinery one.
+  "Dreis & Krump", "Adira", "Edwards - Besco"
 ];
 model.distributorBrands = STRIP_BRANDS.map((name) => {
   const brand = model.brands.find((b) => b.name === name);

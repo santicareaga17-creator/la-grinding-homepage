@@ -239,7 +239,7 @@ const OEMS = [
    * Cumberland and Nelmor are the client's own files. Cumberland's site serves a
    * white-on-dark mark, which was invisible on these white cards; both supplied PNGs
    * already carried transparency and were only trimmed and scaled down. */
-  ["FAE",         "oem-fae.svg",         "fae"],
+  ["FAE",         "oem-fae.png",         "fae"],
   ["Takeuchi",    "oem-takeuchi.svg",    "takeuchi"],
   ["Cumberland",  "oem-cumberland.png",  "cumberland"],
   ["Nelmor",      "oem-nelmor.png",      "nelmor"],

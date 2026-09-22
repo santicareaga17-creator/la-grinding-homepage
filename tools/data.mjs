@@ -230,11 +230,20 @@ const OEMS = [
   ["Rayco",       "oem-rayco.png",       "rayco"],
   ["Fecon",       "oem-fecon.png",       "fecon"],
   ["Bobcat",      "oem-bobcat.png",      "bobcat"],
-  ["Carlton",     "oem-carlton.png",     "carlton"]
-  /* FAE, Takeuchi, Cumberland, Nelmor, Rapid, Sweed and Vecoplan are also wanted here,
-   * but no logo for them exists in the project or in the design handoff, and inventing
-   * one was ruled out. Add a row here once the artwork arrives — nothing else needs
-   * to change. */
+  ["Carlton",     "oem-carlton.png",     "carlton"],
+  /* Sourced from each manufacturer's own site. Five are SVG: sharper at any size than
+   * the PNGs, and transparent by nature. FAE, Rapid and Vecoplan ship their logo in
+   * white because their own headers are dark, so those were recoloured to the site's
+   * text colour — they render greyscale at rest either way. */
+  ["FAE",         "oem-fae.svg",         "fae"],
+  ["Takeuchi",    "oem-takeuchi.svg",    "takeuchi"],
+  ["Cumberland",  "oem-cumberland.png",  "cumberland"],
+  ["Rapid",       "oem-rapid.svg",       "rapid"],
+  ["Sweed",       "oem-sweed.svg",       "sweed"],
+  ["Vecoplan",    "oem-vecoplan.svg",    "vecoplan"]
+  /* Nelmor is still missing. Its own domain now redirects to a domain-name marketplace,
+   * it is not listed on ACS Group's site, and image search turns up only resellers'
+   * pages — no usable first-party logo. Add a row here once the artwork arrives. */
 ];
 model.oems = OEMS.map(([name, file, make]) => ({
   name,

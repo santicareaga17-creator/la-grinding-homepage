@@ -141,7 +141,7 @@ const ADDITIONS = {
     {
       cat: "Granulators – Recycling and Plastics",
       name: "Granulators — Compatible Screens",
-      img: "uploads/granulator-screens-featured.png",
+      img: "uploads/granulator-screens-featured.jpg",
       href: "https://lagrinding.com/product-category/granulators/"
     }
   ]

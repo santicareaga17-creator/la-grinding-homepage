@@ -391,7 +391,9 @@ const COPY_FIXES = [
   ["Saw Blades / Reno", "Saw Blades"],
   // Commercial Orders now states nationwide coverage. The leading "across " keeps this
   // unique: three other places name the same three states and must keep doing so.
-  ["across California, Nevada and Arizona.", "Nationwide across the U.S."]
+  ["across California, Nevada and Arizona.", "Nationwide across the U.S."],
+  // The distributor strip's heading now reads "Based in" rather than "Serving".
+  ["Serving California, Nevada, and Arizona", "Based in California, Nevada, and Arizona"]
 ];
 for (const [from, to] of COPY_FIXES) {
   if (!body.includes(from)) {

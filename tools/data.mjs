@@ -245,12 +245,23 @@ const OEMS = [
   ["Nelmor",      "oem-nelmor.png",      "nelmor"],
   ["Rapid",       "oem-rapid.svg",       "rapid"],
   ["Sweed",       "oem-sweed.svg",       "sweed"],
-  ["Vecoplan",    "oem-vecoplan.svg",    "vecoplan"]
+  ["Vecoplan",    "oem-vecoplan.svg",    "vecoplan"],
+  /* Polar Mohr's logo is the one the design already ships in its distributor list,
+   * fetched from the same URL and kept locally like the rest. Greenteeth's is the
+   * client's file; both already had, or were given, a transparent background. */
+  ["Polar Mohr",  "oem-polar-mohr.png",  "polar"],
+  ["Greenteeth",  "oem-greenteeth.png",
+   "https://lagrinding.com/shop/?swoof=1&pa_oem-compatible=green&pa_main-machine-make=greenteeth&paged=1"]
 ];
-model.oems = OEMS.map(([name, file, make]) => ({
+/* The third column is normally just the machine-make slug, since every OEM so far uses
+ * the same filter URL. Greenteeth's destination has extra parameters, so a full URL is
+ * accepted there too. */
+model.oems = OEMS.map(([name, file, makeOrHref]) => ({
   name,
   logo: `uploads/${file}`,
-  href: `https://lagrinding.com/shop/?swoof=r&pa_main-machine-make=${make}`
+  href: makeOrHref.startsWith("http")
+    ? makeOrHref
+    : `https://lagrinding.com/shop/?swoof=r&pa_main-machine-make=${makeOrHref}`
 }));
 
 export const data = model;

@@ -68,4 +68,114 @@
   #page .about-badges span {
     font-size: clamp(17px, 1.42cqw, 40px) !important;
   }
+
+  /*
+   * The distributor strip becomes a two-slide rotator on desktop (site.js sets
+   * data-group every 10s). Both groups are placed into the same 9x2 area rather
+   * than wrapped in slide elements: the handoff's own tablet and mobile rules are
+   * written against `#page .logos > div`, and a wrapper would put a node between
+   * them and the cells. Nothing here changes a cell, only where it sits and
+   * whether it is showing.
+   *
+   * Every rule is gated on [data-group], so with site.js absent the strip renders
+   * exactly as it did before — all 33 cells, auto-placed, four rows.
+   *
+   * Eighteen cells fill 9x2 and fifteen fill 9x2 less three, so the section is the
+   * same height in both states and nothing shifts as they cross-fade.
+   */
+  #page .logos[data-group] > div:nth-child(1),
+  #page .logos[data-group] > div:nth-child(19) {
+    grid-area: 1 / 1;
+  }
+  #page .logos[data-group] > div:nth-child(2),
+  #page .logos[data-group] > div:nth-child(20) {
+    grid-area: 1 / 2;
+  }
+  #page .logos[data-group] > div:nth-child(3),
+  #page .logos[data-group] > div:nth-child(21) {
+    grid-area: 1 / 3;
+  }
+  #page .logos[data-group] > div:nth-child(4),
+  #page .logos[data-group] > div:nth-child(22) {
+    grid-area: 1 / 4;
+  }
+  #page .logos[data-group] > div:nth-child(5),
+  #page .logos[data-group] > div:nth-child(23) {
+    grid-area: 1 / 5;
+  }
+  #page .logos[data-group] > div:nth-child(6),
+  #page .logos[data-group] > div:nth-child(24) {
+    grid-area: 1 / 6;
+  }
+  #page .logos[data-group] > div:nth-child(7),
+  #page .logos[data-group] > div:nth-child(25) {
+    grid-area: 1 / 7;
+  }
+  #page .logos[data-group] > div:nth-child(8),
+  #page .logos[data-group] > div:nth-child(26) {
+    grid-area: 1 / 8;
+  }
+  #page .logos[data-group] > div:nth-child(9),
+  #page .logos[data-group] > div:nth-child(27) {
+    grid-area: 1 / 9;
+  }
+  #page .logos[data-group] > div:nth-child(10),
+  #page .logos[data-group] > div:nth-child(28) {
+    grid-area: 2 / 1;
+  }
+  #page .logos[data-group] > div:nth-child(11),
+  #page .logos[data-group] > div:nth-child(29) {
+    grid-area: 2 / 2;
+  }
+  #page .logos[data-group] > div:nth-child(12),
+  #page .logos[data-group] > div:nth-child(30) {
+    grid-area: 2 / 3;
+  }
+  #page .logos[data-group] > div:nth-child(13),
+  #page .logos[data-group] > div:nth-child(31) {
+    grid-area: 2 / 4;
+  }
+  #page .logos[data-group] > div:nth-child(14),
+  #page .logos[data-group] > div:nth-child(32) {
+    grid-area: 2 / 5;
+  }
+  #page .logos[data-group] > div:nth-child(15),
+  #page .logos[data-group] > div:nth-child(33) {
+    grid-area: 2 / 6;
+  }
+  #page .logos[data-group] > div:nth-child(16) {
+    grid-area: 2 / 7;
+  }
+  #page .logos[data-group] > div:nth-child(17) {
+    grid-area: 2 / 8;
+  }
+  #page .logos[data-group] > div:nth-child(18) {
+    grid-area: 2 / 9;
+  }
+
+  #page .logos[data-group] > div {
+    transition: opacity 0.55s ease, transform 0.55s ease, visibility 0s linear 0s;
+  }
+  /* The group that is off stage: faded, shifted sideways, and untabbable. The
+   * visibility delay holds it on screen for the length of its own fade. */
+  #page .logos[data-group="0"] > div:nth-child(n + 19),
+  #page .logos[data-group="1"] > div:nth-child(-n + 18) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition-delay: 0s, 0s, 0.55s;
+  }
+  #page .logos[data-group="0"] > div:nth-child(n + 19) {
+    transform: translateX(26px);
+  }
+  #page .logos[data-group="1"] > div:nth-child(-n + 18) {
+    transform: translateX(-26px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #page .logos[data-group] > div {
+      transition-duration: 0.01s;
+      transform: none;
+    }
+  }
 }

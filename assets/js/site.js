@@ -327,6 +327,62 @@
     }, STEP_MS);
   })();
 
+  /* ---------- desktop: the logo strip rotates between two groups ---------- */
+
+  /**
+   * From 1024px up the strip shows the eighteen original manufacturers, then the
+   * fifteen newer ones, swapping every 10 seconds. All 33 cells stay in the DOM and
+   * keep their links and hover; desktop.css lays both groups over the same 9x2 area
+   * and this only flips `data-group`.
+   *
+   * The attribute is removed below 1024px and never set at all if the page is not
+   * wide, so the tablet and mobile strips are untouched and a failure here leaves
+   * the section exactly as it was.
+   */
+  (function () {
+    var DESKTOP_MIN = 1024;
+    var SWAP_MS = 10000;
+
+    var logos = document.querySelector("#page .logos");
+    if (!logos || !window.matchMedia) return;
+
+    var wide = window.matchMedia("(min-width: " + DESKTOP_MIN + "px)");
+    var timer = null;
+    var group = 0;
+
+    // Don't count down while the strip is off-screen: the first group a reader sees
+    // should be the first group, not whichever one the timer happened to land on.
+    var visible = true;
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entries) {
+        visible = entries[0].isIntersecting;
+      }, { threshold: 0 }).observe(logos);
+    }
+
+    function stop() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    function start() {
+      stop();
+      if (!wide.matches) {
+        logos.removeAttribute("data-group");
+        return;
+      }
+      group = 0;
+      logos.setAttribute("data-group", "0");
+      timer = setInterval(function () {
+        if (!visible) return;
+        group = group ? 0 : 1;
+        logos.setAttribute("data-group", String(group));
+      }, SWAP_MS);
+    }
+
+    start();
+    if (wide.addEventListener) wide.addEventListener("change", start);
+    else if (wide.addListener) wide.addListener(start);
+  })();
+
   /* ---------- mobile: Our Services becomes a rail ---------- */
 
   /**

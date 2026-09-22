@@ -317,6 +317,26 @@ const TEMPLATE_PATCHES = [
   }
 ];
 
+TEMPLATE_PATCHES.push(
+  {
+    why: "The Shop by OEM grid lists equipment manufacturers, not the brand catalogue. " +
+         "Matched together with the card's opening tag because the same sc-for also " +
+         "appears in the mega-menu, which keeps the brand list.",
+    from:
+      '        <sc-for list="{{ brands }}" as="b" hint-placeholder-count="18">\n' +
+      '          <a href="{{ b.href }}" class="brand-card"',
+    to:
+      '        <sc-for list="{{ oems }}" as="b" hint-placeholder-count="15">\n' +
+      '          <a href="{{ b.href }}" class="brand-card"'
+  },
+  {
+    why: "Each OEM card shows the logo and the name only — the product counts and " +
+         "'Official distributor' line come from this span.",
+    from: '            <span style="font-size: 12px; color: #6b7280; letter-spacing: 0.04em">{{ b.meta }}</span>\n',
+    to: ''
+  }
+);
+
 let patched = template;
 for (const { from, to, why } of TEMPLATE_PATCHES) {
   const hits = patched.split(from).length - 1;
@@ -393,7 +413,12 @@ const COPY_FIXES = [
   // unique: three other places name the same three states and must keep doing so.
   ["across California, Nevada and Arizona.", "Nationwide across the U.S."],
   // The distributor strip's heading now reads "Based in" rather than "Serving".
-  ["Serving California, Nevada, and Arizona", "Based in California, Nevada, and Arizona"]
+  ["Serving California, Nevada, and Arizona", "Based in California, Nevada, and Arizona"],
+  // "Shop by brand" becomes "Shop by OEM".
+  ["Shop by brand", "Shop by OEM"],
+  ["Machine-matched blades and parts by manufacturer.",
+   "OEM-compatible blades and replacement parts matched to your equipment manufacturer."],
+  ["All brands", "All OEMs"]
 ];
 for (const [from, to] of COPY_FIXES) {
   if (!body.includes(from)) {

@@ -218,6 +218,30 @@ model.distributorBrands = STRIP_BRANDS.map((name) => {
   return brand;
 });
 
+/* "Shop by OEM" lists equipment manufacturers, keyed to the shop's machine-make filter.
+ * The logos are the ones the About Us section already carries (uploads/oem-*.png), so
+ * nothing is re-created. The list is deliberately separate from `brands`: that one still
+ * feeds the mega-menu (menuBrands) and the distributor strip, which must not change. */
+const OEMS = [
+  ["Caterpillar", "oem-caterpillar.png", "cat"],
+  ["Vermeer",     "oem-vermeer.png",     "vermeer"],
+  ["Bandit",      "oem-bandit.png",      "bandit"],
+  ["Morbark",     "oem-morbark.png",     "morbark"],
+  ["Rayco",       "oem-rayco.png",       "rayco"],
+  ["Fecon",       "oem-fecon.png",       "fecon"],
+  ["Bobcat",      "oem-bobcat.png",      "bobcat"],
+  ["Carlton",     "oem-carlton.png",     "carlton"]
+  /* FAE, Takeuchi, Cumberland, Nelmor, Rapid, Sweed and Vecoplan are also wanted here,
+   * but no logo for them exists in the project or in the design handoff, and inventing
+   * one was ruled out. Add a row here once the artwork arrives — nothing else needs
+   * to change. */
+];
+model.oems = OEMS.map(([name, file, make]) => ({
+  name,
+  logo: `uploads/${file}`,
+  href: `https://lagrinding.com/shop/?swoof=r&pa_main-machine-make=${make}`
+}));
+
 export const data = model;
 
 /** The names the template may bind as handlers — every function renderVals returns. */

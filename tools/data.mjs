@@ -264,12 +264,28 @@ model.oems = OEMS.map(([name, file, makeOrHref]) => ({
     : `https://lagrinding.com/shop/?swoof=r&pa_main-machine-make=${makeOrHref}`
 }));
 
+/* The Shop All dropdown lists six priority OEMs; the mobile drawer lists them all.
+ * Both read `model.oems`, so the menus and the on-page grid can never drift apart —
+ * an OEM added to the list above appears in the drawer without another edit here. */
+const MENU_OEMS = ["Caterpillar", "Vermeer", "Bandit", "Morbark", "Rayco", "Fecon"];
+model.menuOems = MENU_OEMS.map((name) => {
+  const oem = model.oems.find((o) => o.name === name);
+  if (!oem) throw new Error(`Shop All dropdown: there is no OEM named "${name}"`);
+  return oem;
+});
+
 export const data = model;
 
+/* Handlers this build adds on top of the handoff, for menu sections the design does
+ * not have. They follow the design's own accordion convention (`acc<Name>T` toggles
+ * the `acc<Name>` panel) and are implemented in assets/js/site.js like the rest. */
+const ADDED_HANDLERS = ["accOemT"];
+
 /** The names the template may bind as handlers — every function renderVals returns. */
-export const handlerNames = new Set(
-  Object.entries(rawVals).filter(([, v]) => typeof v === "function").map(([k]) => k)
-);
+export const handlerNames = new Set([
+  ...Object.entries(rawVals).filter(([, v]) => typeof v === "function").map(([k]) => k),
+  ...ADDED_HANDLERS
+]);
 
 /** The names the template may bind as refs. */
 export const refNamesList = [...refNames.values()].sort();

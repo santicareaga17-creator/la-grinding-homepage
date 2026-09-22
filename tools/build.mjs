@@ -52,7 +52,9 @@ const RUNTIME_PANELS = {
   accCat: "acc-cat",
   accInd: "acc-ind",
   accBrand: "acc-brand",
-  accSvc: "acc-svc"
+  accSvc: "acc-svc",
+  // Shop by OEM, added to the drawer by TEMPLATE_PATCHES below.
+  accOem: "acc-oem"
 };
 
 const VOID_ELEMENTS = new Set([
@@ -334,6 +336,59 @@ TEMPLATE_PATCHES.push(
          "'Official distributor' line come from this span.",
     from: '            <span style="font-size: 12px; color: #6b7280; letter-spacing: 0.04em">{{ b.meta }}</span>\n',
     to: ''
+  }
+,
+  {
+    why:
+      "Shop by OEM sits under Shop by Brand in the dropdown's third column, " +
+      "six priority manufacturers deep. Heading, link and grid styles are " +
+      "the column's own, so the section is indistinguishable from the one " +
+      "above it. 'View all OEMs' jumps to the page's OEM grid rather than " +
+      "listing all of them here, closing the menu on the way with the " +
+      "dropdown's own closeMenus — it is the one link that does not " +
+      "navigate away from the page.",
+    from:
+      '            <a href="https://lagrinding.com/shop/" style="display: inline-block; margin-top: 16px; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 13px; color: #0B2A4A; border-bottom: 2px solid #EA4E32; padding-bottom: 3px">View the full catalog</a>\n' +
+      '          </div>',
+    to:
+      '            <a href="https://lagrinding.com/shop/" style="display: inline-block; margin-top: 16px; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 13px; color: #0B2A4A; border-bottom: 2px solid #EA4E32; padding-bottom: 3px">View the full catalog</a>\n' +
+      '            <div style="margin-top: 26px; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; font-size: 12.5px; color: #EA4E32; padding-bottom: 10px; border-bottom: 1px solid #d4d4d7">Shop by OEM</div>\n' +
+      '            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; margin-top: 14px">\n' +
+      '              <sc-for list="{{ menuOems }}" as="o" hint-placeholder-count="6">\n' +
+      '                <a href="{{ o.href }}" style="font-size: 14px; color: #1d1f20; padding: 6px 0" style-hover="color: #EA4E32">{{ o.name }}</a>\n' +
+      '              </sc-for>\n' +
+      '            </div>\n' +
+      '            <a href="#shop-by-oem" onClick="{{ closeMenus }}" style="display: inline-block; margin-top: 16px; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 13px; color: #0B2A4A; border-bottom: 2px solid #EA4E32; padding-bottom: 3px">View all OEMs</a>\n' +
+      '          </div>'
+  },
+  {
+    why:
+      "The drawer gets the same section above Shop by Brand, listing every " +
+      "OEM: a phone accordion scrolls, so there is nothing to shorten. It " +
+      "reuses the design's own trigger markup and one-open-at-a-time " +
+      "accordion behaviour.",
+    from:
+      '        <button type="button" onClick="{{ accBrandT }}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; min-height: 52px; background: #ffffff; border: 0; border-bottom: 1px solid #e7e7ea; cursor: pointer; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 16px; color: #0B2A4A">Shop by Brand<span style="color: #EA4E32; font-size: 20px; line-height: 1">+</span></button>\n',
+    to:
+      '        <button type="button" onClick="{{ accOemT }}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; min-height: 52px; background: #ffffff; border: 0; border-bottom: 1px solid #e7e7ea; cursor: pointer; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 16px; color: #0B2A4A">Shop by OEM<span style="color: #EA4E32; font-size: 20px; line-height: 1">+</span></button>\n' +
+      '        <sc-if value="{{ accOem }}" hint-placeholder-val="{{ false }}">\n' +
+      '          <div style="display: flex; flex-direction: column; background: #F2F2F3">\n' +
+      '            <sc-for list="{{ oems }}" as="o" hint-placeholder-count="15">\n' +
+      '              <a href="{{ o.href }}" style="padding: 13px 16px; font-size: 15px; color: #1d1f20; border-bottom: 1px solid #e7e7ea">{{ o.name }}</a>\n' +
+      '            </sc-for>\n' +
+      '          </div>\n' +
+      '        </sc-if>\n' +
+      '        <button type="button" onClick="{{ accBrandT }}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; min-height: 52px; background: #ffffff; border: 0; border-bottom: 1px solid #e7e7ea; cursor: pointer; font-family: \'Barlow Condensed\', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 16px; color: #0B2A4A">Shop by Brand<span style="color: #EA4E32; font-size: 20px; line-height: 1">+</span></button>\n'
+  },
+  {
+    why:
+      "The dropdown's 'View all OEMs' link needs somewhere to land. " +
+      "scroll-margin clears the sticky header so the heading is not hidden " +
+      "under it.",
+    from:
+      '  <section data-screen-label="Shop by Brand" style="background: #ffffff">',
+    to:
+      '  <section id="shop-by-oem" data-screen-label="Shop by Brand" style="background: #ffffff; scroll-margin-top: 112px">'
   }
 );
 

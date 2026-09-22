@@ -44,7 +44,10 @@
   /* ---------- mobile drawer + accordions ---------- */
 
   // The design keeps one accordion group open at a time (`acc` is a single value).
-  var ACCORDIONS = { accCatT: "acc-cat", accIndT: "acc-ind", accBrandT: "acc-brand", accSvcT: "acc-svc" };
+  var ACCORDIONS = {
+    accCatT: "acc-cat", accIndT: "acc-ind", accOemT: "acc-oem",
+    accBrandT: "acc-brand", accSvcT: "acc-svc"
+  };
   var openAccordion = null;
 
   function showAccordion(name) {

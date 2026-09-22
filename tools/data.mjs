@@ -199,25 +199,61 @@ for (const { lists, find, set } of EDITS) {
   if (hits === 0) throw new Error(`Edit is stale: no entry named "${find}" in ${lists.join(", ")}`);
 }
 
-/* The distributor strip on the homepage shows manufacturer logos only — no names, no
- * product counts. They are the first fifteen of the design's own `brands` list, which
- * already carries each one's logo and its destination URL, so nothing is duplicated or
- * invented here. */
-const STRIP_BRANDS = [
-  "Freud", "Diablo", "Wysong & Miles", "Accurshear", "Pexto",
-  "Tennsmith", "Niagara", "Roper Whitney", "Di-Acro Elga", "Atlantic/Haco",
-  "Famco", "Amada", "Pearson", "Summit", "Durma",
-  // Added after the first fifteen; these complete the design's brand list.
-  // Their display names there are shorter than the logos read: "Dreis & Krump" is the
-  // Chicago Dreis & Krump logo, "Edwards - Besco" the Besco Machinery one.
-  "Dreis & Krump", "Adira", "Edwards - Besco"
+/* The distributor strip, restored to the order the Tree Care build shipped: the
+ * eighteen manufacturers the design itself listed, then the fifteen added since.
+ *
+ * The restored rows name their logo explicitly, because the design carried them in
+ * `brandLogos` — a list of pictures with no destinations. Those cells were never
+ * links, so there is no earlier href to preserve and the ones below are the
+ * client's. A row with no href renders the way it did before: an image, not a link.
+ *
+ * Every destination was checked against lagrinding.com on 2026-09-21, through the
+ * store's own attribute terms and then in a browser. A `pa_main-brand` term that
+ * does not exist returns 404, so a wrong slug is worse than no link at all: the
+ * eleven rows below with no href are the ones the shop has nothing to point at.
+ * They are listed in the commit message and were reported rather than guessed. */
+const SHOP = "https://lagrinding.com/shop/?swoof=1&pa_main-brand=";
+const RESTORED = [
+  ["Freud",             "logo_freud.webp",              SHOP + "freud"],
+  ["Diablo",            "diablo-logo.webp",             SHOP + "diablo"],
+  ["Accurshear",        "logo-AccurShear.webp",         SHOP + "accurshear"],
+  ["Bobst",             "logo-BOBST.webp",              null],
+  ["Challenge",         "logo-Challenge-Machinery.webp", SHOP + "challenge"],
+  // The design's list skips Cumberland; this is the client's own CPS file, the one
+  // already on the Cumberland OEM card and the one the Tree Care strip showed.
+  ["Cumberland",        "oem-cumberland.png",           SHOP + "cumberland"],
+  ["FS Tool",           "logo-fs-tool.webp",            null],
+  ["Herbold Meckesheim", "logo-herbold-usa.webp",       SHOP + "herbold"],
+  ["Lenox",             "logo-lenox.webp",              null],
+  ["Multivac",          "logo-multivac.webp",           null],
+  ["National Equipment Corporation", "logo-national-equipment.webp", null],
+  // Polar's parts live in a category of their own, not behind a brand filter.
+  ["Polar Mohr",        "logo-polar-mohr.webp",
+   "https://lagrinding.com/product-category/la-grinding-catalog/polar-parts/"],
+  ["Reiser",            "logo-reiser-packaging.webp",   null],
+  ["Tidland",           "logo-tidland-slitter.webp",    null],
+  ["Eldan Recycling",   "unnamed.webp",                 null],
+  ["Columbus McKinnon", "unnamed_1.webp",               null],
+  ["Barclay Shredders", "unnamed_2.webp",               null],
+  ["Granutech Saturn",  "unnamed_3.webp",               null]
 ];
-model.distributorBrands = STRIP_BRANDS.map((name) => {
-  const brand = model.brands.find((b) => b.name === name);
-  if (!brand) throw new Error(`Distributor strip: the design has no brand named "${name}"`);
-  return brand;
-});
 
+/* The newer cards keep the logo and the destination they already had — they are read
+ * straight out of the design's brand list, not restated here. */
+const NEWER = [
+  "Wysong & Miles", "Pexto", "Tennsmith", "Niagara", "Roper Whitney",
+  "Di-Acro Elga", "Atlantic/Haco", "Famco", "Amada", "Pearson",
+  "Summit", "Durma", "Dreis & Krump", "Adira", "Edwards - Besco"
+];
+
+model.distributorBrands = [
+  ...RESTORED.map(([name, file, href]) => ({ name, logo: `uploads/${file}`, href })),
+  ...NEWER.map((name) => {
+    const brand = model.brands.find((b) => b.name === name);
+    if (!brand) throw new Error(`Distributor strip: the design has no brand named "${name}"`);
+    return brand;
+  })
+].map((b) => ({ ...b, unlinked: !b.href }));
 /* "Shop by OEM" lists equipment manufacturers, keyed to the shop's machine-make filter.
  * The logos are the ones the About Us section already carries (uploads/oem-*.png), so
  * nothing is re-created. The list is deliberately separate from `brands`: that one still

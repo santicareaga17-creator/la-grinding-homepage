@@ -289,9 +289,10 @@ const template = section(source, "</helmet>", "</x-dc>");
  */
 const TEMPLATE_PATCHES = [
   {
-    why: "The distributor strip shows manufacturer logos only — no names, no product " +
-         "counts — drawn from the design's own brand list so each keeps its existing " +
-         "destination. The cells become links and pick up the brand cards' hover.",
+    why: "The distributor strip shows manufacturer logos only — no names, no " +
+         "product counts. A row the shop can filter on becomes a link and picks up " +
+         "the brand cards' hover; a row with no destination stays the plain image " +
+         "the design shipped, hovering the same way. Both look identical at rest.",
     from:
       '        <sc-for list="{{ brandLogos }}" as="l" hint-placeholder-count="18">\n' +
       '          <div style="background: #ffffff; height: 108px; display: flex; align-items: center; justify-content: center; padding: 16px">\n' +
@@ -299,23 +300,22 @@ const TEMPLATE_PATCHES = [
       '          </div>\n' +
       '        </sc-for>',
     to:
-      '        <sc-for list="{{ distributorBrands }}" as="b" hint-placeholder-count="15">\n' +
+      '        <sc-for list="{{ distributorBrands }}" as="b" hint-placeholder-count="33">\n' +
       // The <div> stays: every responsive rule for this strip is written against
       // `#page .logos > div`, so replacing it with the link would break all of them.
       '          <div style="position: relative; background: #ffffff; height: 108px; display: flex; align-items: center; justify-content: center; padding: 16px">\n' +
+      '            <sc-if value="{{ b.href }}">\n' +
       // inset:0 makes the whole cell clickable, including its padding; padding:inherit
       // keeps the logo inset by whatever the responsive rules give the cell.
-      '            <a class="logo-link" href="{{ b.href }}" aria-label="{{ b.name }}" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: inherit">\n' +
-      '              <img data-src="{{ b.logo }}" alt="{{ b.name }}" style="max-width: 100%; max-height: 62px; width: auto; height: auto; object-fit: contain">\n' +
-      '            </a>\n' +
+      '              <a class="logo-link" href="{{ b.href }}" aria-label="{{ b.name }}" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: inherit">\n' +
+      '                <img data-src="{{ b.logo }}" alt="{{ b.name }}" style="max-width: 100%; max-height: 62px; width: auto; height: auto; object-fit: contain">\n' +
+      '              </a>\n' +
+      '            </sc-if>\n' +
+      '            <sc-if value="{{ b.unlinked }}">\n' +
+      '              <img data-src="{{ b.logo }}" alt="{{ b.name }}" style="max-width: 100%; max-height: 62px; width: auto; height: auto; object-fit: contain; filter: grayscale(1); opacity: 0.75" style-hover="filter: none; opacity: 1">\n' +
+      '            </sc-if>\n' +
       '          </div>\n' +
       '        </sc-for>'
-  },
-  {
-    why: "Fifteen logos divide evenly into five columns, so the strip no longer ends " +
-         "on a part-empty row the way nine columns left it.",
-    from: '<div class="g-mob-3 logos" style="display: grid; grid-template-columns: repeat(9, 1fr);',
-    to:   '<div class="g-mob-3 logos" style="display: grid; grid-template-columns: repeat(5, 1fr);'
   }
 ];
 

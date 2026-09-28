@@ -390,6 +390,33 @@ TEMPLATE_PATCHES.push(
     to:
       '  <section id="shop-by-oem" data-screen-label="Shop by Brand" style="background: #ffffff; scroll-margin-top: 112px">'
   }
+,
+  {
+    why:
+      "The Shop by Industry section is removed from the homepage. The dropdown " +
+      "and the drawer keep their own Shop by Industry lists, which read the same " +
+      "`shopIndustries` data and are untouched.",
+    from:
+      '  <section data-screen-label="Shop by Industry" style="background: #ffffff">\n' +
+      '    <div style="max-width: 1360px; margin: 0 auto; padding: 64px 40px 0">\n' +
+      '      <h2 style="font-family: \'Barlow Condensed\', sans-serif; font-weight: 600; text-transform: uppercase; font-size: 46px; line-height: 1; color: #0B2A4A; margin: 0">Shop by industry</h2>\n' +
+      '      <p style="font-size: 16px; color: #4b5563; margin: 12px 0 0">Filter the catalog to the products your operation runs.</p>\n' +
+      '      <div class="g-mob-2" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 32px">\n' +
+      '        <sc-for list="{{ shopIndustries }}" as="i" hint-placeholder-count="10">\n' +
+      '          <a href="{{ i.href }}" class="ind-card" style="border: 1px solid #d4d4d7; background: #ffffff; padding: 24px 16px 22px; color: #1d1f20; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-height: 250px; justify-content: flex-start" style-hover="border-color: #EA4E32; background: #F2F2F3">\n' +
+      '            <span style="width: 100%; height: 156px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px">\n' +
+      '              <img data-src="{{ i.icon }}" alt="{{ i.name }}" style="max-height: 156px; max-width: 100%; width: auto; height: auto; object-fit: contain">\n' +
+      '            </span>\n' +
+      '            <span style="font-family: \'Barlow Condensed\', sans-serif; font-weight: 600; text-transform: uppercase; font-size: 18px; line-height: 1.08; color: #0B2A4A">{{ i.name }}</span>\n' +
+      '          </a>\n' +
+      '        </sc-for>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '  </section>\n' +
+      '\n' +
+      '',
+    to: ''
+  }
 );
 
 let patched = template;

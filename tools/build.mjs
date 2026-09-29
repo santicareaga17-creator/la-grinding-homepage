@@ -888,10 +888,68 @@ ${body.trim()}
 
 await writeFile(join(OUT, "index.html"), document, "utf8");
 
-// The design's own <style> block, kept verbatim so its rules stay authoritative.
+/* The first handoff's <style> block, with one change: its responsive rules are kept
+ * out of the refresh.
+ *
+ * Those rules restyle the old layout at each breakpoint by shape rather than by name
+ * — `#page h2 { font-size: 28px !important }`, `#page [style*="grid-template-columns"]
+ * { grid-template-columns: 1fr !important }` — so they reach into the September 2026
+ * sections and overrule the inline sizing that design ships. The refresh carries a
+ * complete layout for each side of 1024px and needs none of them.
+ *
+ * Only rules inside a media query are narrowed; the unconditional ones are the page's
+ * base typography and colour, which the refresh inherits on purpose. Each selector
+ * gets `:not(.r26 *)` on its subject, so it keeps matching everywhere except inside
+ * the refresh subtree. Nothing else about the file changes. */
+function exemptRefresh(css) {
+  let narrowed = 0;
+  let out = "";
+  let i = 0;
+
+  const narrowSelectors = (selectors) =>
+    selectors.split(",").map((sel) => {
+      const trimmed = sel.trim();
+      if (!trimmed.startsWith("#page") || trimmed.includes("::")) return sel;
+      narrowed += 1;
+      return sel.replace(/\s+$/, "") + ":not(.r26 *)";
+    }).join(",");
+
+  while (i < css.length) {
+    const at = css.indexOf("@media", i);
+    if (at === -1) { out += css.slice(i); break; }
+    const open = css.indexOf("{", at);
+    if (open === -1) { out += css.slice(i); break; }
+
+    // Find this media block's matching close brace.
+    let depth = 1, j = open + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === "{") depth += 1;
+      else if (css[j] === "}") depth -= 1;
+      j += 1;
+    }
+
+    const body = css.slice(open + 1, j - 1);
+    // Rewrite each rule's selector list inside the block.
+    const rewritten = body.replace(/([^{}]+)\{([^{}]*)\}/g,
+      (_m, selectors, decls) => `${narrowSelectors(selectors)}{${decls}}`);
+
+    out += css.slice(i, open + 1) + rewritten + "}";
+    i = j;
+  }
+
+  if (narrowed === 0) {
+    throw new Error("No responsive #page rules were narrowed; the handoff's stylesheet changed shape");
+  }
+  return { css: out, narrowed };
+}
+
+const exempted = exemptRefresh(pageStyles.trim());
+
 await writeFile(
   join(OUT, "assets", "css", "page.css"),
-  `/* Copied verbatim from the <style> block in the design handoff. */\n${pageStyles.trim()}\n\n` +
+  `/* From the <style> block in the first design handoff. Its responsive rules are\n` +
+    `   scoped away from the September 2026 sections — see exemptRefresh() in\n` +
+    `   tools/build.mjs. Everything else is verbatim. */\n${exempted.css}\n\n` +
     `/* Panels that the design renders conditionally are always in the DOM here. */\n` +
     `[data-panel][hidden] { display: none !important; }\n`,
   "utf8"

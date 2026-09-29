@@ -7,13 +7,29 @@ This is a standalone project. It shares a build recipe with the separate Tree Ca
 Industry site but has its own repository, its own Vercel project and its own assets;
 nothing here is deployed over that site.
 
+**Live:** <https://la-grinding-homepage.vercel.app>
+
+## What is shared with the Tree Care site, exactly
+
+Both sites are compiled from the same Claude Design export, so the chrome is common —
+but "the same" is worth stating precisely, because only one of the two is untouched:
+
+| | Status |
+| --- | --- |
+| **Footer** | **Byte-identical.** Same 10,971 characters of markup from the same handoff; this project has never edited it. |
+| **Navbar** | **Same component, two deliberate additions.** The markup is identical to the Tree Care export once the handoff's image deferral (`data-src` vs `src`) is normalised. On top of it this project adds a *Shop by OEM* section — a column in the Shop All dropdown and an accordion in the mobile drawer — and a mobile rule keeping the three phone numbers on one line. Nothing else in the nav differs. |
+| **Page body** | **Different.** Everything between the header and the footer belongs to this project. |
+
+Both claims above are checked by comparing the two repositories' handoffs directly,
+not assumed from a shared origin.
+
 ---
 
 ## Live environment
 
 | | |
 | --- | --- |
-| **Production URL** | see `Deployment` below |
+| **Production URL** | <https://la-grinding-homepage.vercel.app> |
 | **Hosting** | Vercel (static output) |
 | **Vercel project** | `la-grinding-homepage` |
 | **Repository** | <https://github.com/santicareaga17-creator/la-grinding-homepage> |
@@ -43,20 +59,27 @@ There are **no dependencies**. `package.json` declares neither `dependencies` no
 ## Repository structure
 
 ```
-design-source/                   the Claude Design handoff — the source of truth
-  LA Grinding Homepage.dc.html     markup, styles and page data, as exported
+design-source/                   the Claude Design handoffs — the source of truth
+  LA Grinding Homepage.dc.html     the original export: nav, footer and everything
+                                     from "One partner makes it easier" down
   support.js                       the editor's React runtime (reference only, never shipped)
   _ds/industry-…/styles.css        the design system stylesheet
+  refresh-2026-09/                 the September 2026 export: hero, products, About Us
+    LA-Home-Takeuchi-C.dc.html       the page
+    LA-Nav.dc.html                   its own nav — NOT used; this site keeps the original
 assets/
   css/desktop.css                  desktop-only fix, all inside @media min-width 1024px
   css/mobile.css                   mobile-only refinements, all inside @media 640px
   js/site.js                       all page behaviour (no framework)
-  uploads/                         100 images, copied out of the handoff
+  uploads/                         130 images from the original handoff
+    r26/                           54 images from the September 2026 refresh
 tools/
-  build.mjs                        the compiler: handoff -> dist/
-  data.mjs                         executes the design's renderVals() to get page data
-  sync-assets.mjs                  copies the referenced images out of the handoff
+  build.mjs                        the compiler: both handoffs -> dist/
+  data.mjs                         executes the original handoff's renderVals()
+  refresh-data.mjs                 the same for the refresh, once per UI state
+  sync-assets.mjs                  copies the referenced images out of a handoff
   make-mobile-plates.mjs           draws the taller mobile hero plates
+  strip-banner-logos.py            paints the printed logos out of the Freud banner
   serve.mjs                        local static server
 dist/                            build output — generated, gitignored
 ```
@@ -77,10 +100,38 @@ editor by a CDN React + Babel runtime (`support.js`). That runtime is never ship
 | `style-hover` / `style-active` | real CSS `:hover` / `:active` rules in `site.css` |
 | `onClick` / `onMouseEnter` / `ref` | `data-on-*` / `data-ref` hooks wired by `site.js` |
 | `<img data-src="…">` | `<img src="…">`, resolved at build time |
-| the `<helmet><style>` block | copied out **verbatim** as `page.css` |
+| the `<helmet><style>` block | copied out as `page.css`, near-verbatim (see below) |
 
-Copying the `<style>` block verbatim is what preserves the design's responsive
-behaviour: its rules stay authoritative and are never re-authored.
+Copying the `<style>` block rather than re-authoring it is what preserves the design's
+responsive behaviour: its rules stay authoritative. The single change is that its
+**responsive** rules are scoped away from the September 2026 sections. Those rules
+target the old layout by shape rather than by name — `#page h2 { font-size: 28px
+!important }`, `#page [style*="grid-template-columns"] { grid-template-columns: 1fr }`
+— so they reached into the newer sections and overruled the sizing that design ships
+inline. Each such selector gets `:not(.r26 *)` on its subject, 113 of them; the
+unconditional rules, which are the page's base typography and colour, are untouched.
+Verified by measuring every section below About Us against production: unchanged.
+
+### Two handoffs, one page
+
+The page is compiled from **two** Claude Design exports, spliced at build time:
+
+| Part of the page | Comes from |
+| --- | --- |
+| Nav and footer | `LA Grinding Homepage.dc.html` (the original) |
+| Hero, Products, About Us | `refresh-2026-09/LA-Home-Takeuchi-C.dc.html` |
+| "One partner makes it easier" down to the photo strip | the original |
+
+The refresh replaces three sections outright and nothing else; everything below About Us
+still comes from the first export. The refresh also ships its own nav and footer, and
+this project deliberately ignores both — see the table at the top of this file.
+
+That design renders one state at a time (one hero slide, one open products panel, one
+mini-card set) and a static page cannot, so `tools/refresh-data.mjs` runs its
+`renderVals()` once per state and the build emits them all, each in the position the
+design gives it, with `site.js` switching between them. It also ships two complete
+layouts instead of one responsive tree, split at 1024px as the design splits it; both
+are in the DOM and CSS picks (`.r26-desk` / `.r26-mob`).
 
 ### Page data is executed, not transcribed
 
@@ -249,17 +300,25 @@ described above.
 
 All are ports of the design's own logic, with its timings preserved:
 
-- **Hero slider** — 4 slides on a 500% track with a trailing copy of slide 1, so the
-  loop has no visible rewind. Auto-advances every 12s; arrows, touch swipe (>45px) and
-  horizontal trackpad scroll all drive it.
+- **Hero slider** — 5 slides, one `<section>` each, switched by `hidden`. Auto-advances
+  every 9s; driven by the arrows, the dots, a touch swipe (>40px horizontal, and more
+  horizontal than vertical), and a two-finger trackpad gesture. The trackpad handler
+  accumulates travel rather than testing a single event, and cancels the gesture so the
+  browser cannot claim it as a back/forward navigation. Slide 2 carries two dropdowns
+  of mini cards, which pause the carousel while open.
 - **Sticky header** — condenses on scroll (util row 52→40px, nav row 96→76px, shadow
   on), driven by a 1px sentinel rather than a fixed scroll offset.
 - **Shop All / Services mega-menus** — open on hover, close on leave.
 - **Search** — suggestion panel on focus, closing 160ms after blur so a click on a
   suggestion still registers.
 - **Category / product / review rails** — arrow buttons nudge by 780px.
-- **Mobile drawer** — hamburger toggles it; four accordion groups, one open at a time,
-  with the trailing glyph switching between `+` and `–`.
+- **Mobile drawer** — hamburger toggles it; five accordion groups (Category, Industry,
+  OEM, Brand, Services), one open at a time, with the trailing glyph switching between
+  `+` and `–`.
+- **Products grid** — each card opens its own panel of links: below the grid on desktop,
+  inline at the end of the card's row on mobile, as the design does it.
+- **OEM strip under About Us** — white marks at rest; on hover the cell lightens and the
+  mark shows its real colours, and each one links to that make's shop filter.
 - **Distributor logo strip** — below 640px it steps one logo per second and wraps,
   pausing 2.5s whenever it is touched, and respecting `prefers-reduced-motion`.
 
@@ -267,8 +326,14 @@ All are ports of the design's own logic, with its timings preserved:
 
 ## Assets
 
-`assets/uploads/` holds the 100 images the design uses, copied out of the handoff. They
-are the real photography and logos from the design — nothing is a placeholder.
+`assets/uploads/` holds the 130 images the original handoff uses, and `uploads/r26/`
+the 54 the September 2026 refresh adds, all copied out of their handoffs unmodified.
+They are the real photography and logos from the design — nothing is a placeholder.
+
+One exception, and it is deliberate: the Freud & Diablo banner shipped with both logos
+printed into its artwork, and the hero draws its own over the same spot. They are
+painted out by `tools/strip-banner-logos.py`, which is reproducible and documents the
+method; the untouched originals are the handoff's own `assets/cr/B-2.png` and `B-2m.png`.
 
 The design also hot-links 29 images from `lagrinding.com/wp-content/uploads/` (review
 thumbnails, the service-area map, some product and brand logos). Those are left pointing
@@ -279,12 +344,22 @@ update made there.
 
 ## Deployment
 
+Live at **<https://la-grinding-homepage.vercel.app>**, from the `la-grinding-homepage`
+Vercel project, deployed off `main`.
+
 Vercel builds with `npm run build` and serves `dist/` (see `vercel.json`). Deploy from
 this directory:
 
 ```bash
-vercel --prod
+vercel --prod --yes
 ```
 
 This project has no `.vercel/` link committed, so confirm the target project is
-`la-grinding-homepage` before deploying.
+`la-grinding-homepage` before deploying — never the Tree Care one.
+
+After a deploy the served page should match the local build exactly:
+
+```bash
+curl -s https://la-grinding-homepage.vercel.app/ -o /tmp/prod.html
+cmp dist/index.html /tmp/prod.html && echo "production matches the local build"
+```

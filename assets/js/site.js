@@ -260,6 +260,147 @@
     }, { passive: false });
   })();
 
+  /* ---------- September 2026 refresh: hero slider and category panels ---------- */
+
+  /**
+   * The refresh handoff renders one hero slide and one open category panel at a time.
+   * The build emits every state instead — each slide as its own <section>, each panel
+   * hidden next to the grid — and this switches between them.
+   *
+   * Both layouts are in the DOM at once (CSS shows one at 1024px), so every query here
+   * is scoped to a layout root and the two run independently: switching a slide on
+   * desktop also switches it on mobile, which keeps them in step across a resize.
+   */
+  (function () {
+    var AUTOPLAY_MS = 9000;
+
+    var roots = [].slice.call(document.querySelectorAll(".r26"));
+    if (!roots.length) return;
+
+    var slides = [].slice.call(document.querySelectorAll(".r26-slide"));
+    if (!slides.length) return;
+
+    var count = 0;
+    slides.forEach(function (el) {
+      count = Math.max(count, Number(el.getAttribute("data-r26-slide")) + 1);
+    });
+
+    var current = 0;
+    var timer = null;
+
+    function closeMinis() {
+      [].slice.call(document.querySelectorAll(".r26-minis")).forEach(function (p) {
+        p.hidden = true;
+      });
+      // The buttons colour themselves when their panel is open; reset both.
+      [].slice.call(document.querySelectorAll("[data-on-click='heroMiniShop']")).forEach(function (b) {
+        b.style.background = "#EA4E32";
+        if (b.lastElementChild) b.lastElementChild.style.transform = "none";
+      });
+      [].slice.call(document.querySelectorAll("[data-on-click='heroMiniTech']")).forEach(function (b) {
+        b.style.background = "#12305A";
+        if (b.lastElementChild) b.lastElementChild.style.transform = "none";
+      });
+      openMini = null;
+    }
+
+    function show(n) {
+      current = ((n % count) + count) % count;
+      slides.forEach(function (el) {
+        el.hidden = Number(el.getAttribute("data-r26-slide")) !== current;
+      });
+      closeMinis();
+    }
+
+    function go(step, auto) {
+      show(current + step);
+      if (!auto) restart();
+    }
+
+    function restart() {
+      clearInterval(timer);
+      timer = setInterval(function () { go(1, true); }, AUTOPLAY_MS);
+    }
+
+    actions.prev = function () { go(-1); };
+    actions.next = function () { go(1); };
+    actions.heroDot = function (e, el) {
+      var n = Number(el.getAttribute("data-slide"));
+      if (!isNaN(n)) { show(n); restart(); }
+    };
+
+    /* Swipe and horizontal wheel, with the design's own thresholds. */
+    var sx = null, sy = null, wheelAt = 0;
+    actions.swTs = function (e) {
+      var t = e.touches && e.touches[0];
+      if (t) { sx = t.clientX; sy = t.clientY; }
+    };
+    actions.swTe = function (e) {
+      if (sx == null) return;
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) { sx = null; return; }
+      var dx = t.clientX - sx, dy = t.clientY - sy;
+      sx = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+    };
+    actions.swWheel = function (e) {
+      if (Math.abs(e.deltaX) < 25 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+      var now = Date.now();
+      if (now - wheelAt < 700) return;
+      wheelAt = now;
+      go(e.deltaX > 0 ? 1 : -1);
+    };
+
+    /* The hero's two dropdowns, on the one slide that has them. */
+    var openMini = null;
+
+    function toggleMini(which, restColour) {
+      var next = openMini === which ? null : which;
+      closeMinis();
+      if (!next) { restart(); return; }
+      openMini = next;
+      // The panels live inside their own slide, so only the visible one can match.
+      [].slice.call(document.querySelectorAll(
+        ".r26-slide:not([hidden]) .r26-minis[data-r26-minis='" + which + "']"
+      )).forEach(function (p) { p.hidden = false; });
+      [].slice.call(document.querySelectorAll(
+        "[data-on-click='" + (which === "shop" ? "heroMiniShop" : "heroMiniTech") + "']"
+      )).forEach(function (b) {
+        b.style.background = "#c93d24";
+        if (b.lastElementChild) b.lastElementChild.style.transform = "rotate(180deg)";
+      });
+      // An open panel pauses the carousel, as it does in the design.
+      clearInterval(timer);
+      void restColour;
+    }
+
+    actions.heroMiniShop = function () { toggleMini("shop"); };
+    actions.heroMiniTech = function () { toggleMini("tech"); };
+
+    /* ---- category panels ---- */
+
+    var openCat = null;
+
+    actions.catMenu = function (e, el) {
+      if (e && e.preventDefault) e.preventDefault();
+      var key = el.getAttribute("data-cat-menu");
+      var next = openCat === key ? null : key;
+      openCat = next;
+      [].slice.call(document.querySelectorAll(".r26-catmenu")).forEach(function (p) {
+        p.hidden = p.getAttribute("data-r26-catmenu") !== next;
+      });
+      // The open card carries a ring in the design; mirror it with the same inset shadow.
+      [].slice.call(document.querySelectorAll("[data-cat-menu]")).forEach(function (card) {
+        var on = next && card.getAttribute("data-cat-menu") === next;
+        var box = card.firstElementChild;
+        if (box) box.style.boxShadow = on ? "inset 0 0 0 3px #EA4E32" : "";
+      });
+    };
+
+    show(0);
+    restart();
+  })();
+
   /* ---------- wiring ---------- */
 
   var events = {
@@ -267,13 +408,20 @@
     "data-on-mouseenter": "mouseenter",
     "data-on-mouseleave": "mouseleave",
     "data-on-focus": "focus",
-    "data-on-blur": "blur"
+    "data-on-blur": "blur",
+    // The refresh hero is swipeable.
+    "data-on-touchstart": "touchstart",
+    "data-on-touchend": "touchend",
+    "data-on-wheel": "wheel"
   };
 
   Object.keys(events).forEach(function (attr) {
     document.querySelectorAll("[" + attr + "]").forEach(function (el) {
       var handler = actions[el.getAttribute(attr)];
-      if (handler) el.addEventListener(events[attr], handler);
+      if (!handler) return;
+      // The element is passed alongside the event: several refresh handlers are shared
+      // by a set of controls and read which one fired from its own data attribute.
+      el.addEventListener(events[attr], function (e) { handler.call(el, e, el); });
     });
   });
 

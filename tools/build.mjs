@@ -25,6 +25,7 @@ import { readFile, readdir, writeFile, mkdir, rm, cp } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { data, handlerNames, refNamesList } from "./data.mjs";
+import * as refresh from "./refresh-data.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = join(ROOT, "design-source", "LA Grinding Homepage.dc.html");
@@ -228,7 +229,11 @@ function lowerInteractions(html, sheet) {
     onMouseEnter: "data-on-mouseenter",
     onMouseLeave: "data-on-mouseleave",
     onFocus: "data-on-focus",
-    onBlur: "data-on-blur"
+    onBlur: "data-on-blur",
+    // The refresh hero is swipeable, so it binds pointer events too.
+    onTouchStart: "data-on-touchstart",
+    onTouchEnd: "data-on-touchend",
+    onWheel: "data-on-wheel"
   };
 
   return html.replace(/<([a-zA-Z][\w-]*)((?:\s[^>]*?)?)(\/?)>/g, (whole, tag, attrs, close) => {
@@ -428,6 +433,280 @@ for (const { from, to, why } of TEMPLATE_PATCHES) {
   patched = patched.replace(from, to);
 }
 
+/* ---------- September 2026 refresh ---------- *
+ *
+ * Three sections — the hero, the category grid and About Us — are replaced by a second
+ * handoff, design-source/refresh-2026-09/. Everything below About Us still comes from
+ * the original one, so the two are compiled separately and the result is spliced in
+ * here, before the main pass runs: the refresh markup arrives with its directives
+ * already resolved but its `style-hover` and handler bindings intact, so it picks up
+ * the same hover lowering and the same handler checks as the rest of the page.
+ *
+ * That design renders one state at a time — one hero slide, one open category menu —
+ * and the shipped page cannot, so each state is rendered here and site.js switches
+ * between them. Sections are emitted whole rather than split into layers: duplicating
+ * the hero's action row four times costs a little markup and keeps every slide's own
+ * geometry exactly as the design wrote it.
+ */
+
+const refreshSource = await readFile(refresh.REFRESH_SOURCE, "utf8");
+let refreshTemplate = section(refreshSource, "</helmet>", "</x-dc>");
+
+/* Patches to the refresh handoff, for the same reason TEMPLATE_PATCHES exists: the
+ * design's own file stays a faithful record of the export. */
+const REFRESH_PATCHES = [
+  {
+    why: "The category cards bind a per-card handler the design closes over. The page " +
+         "needs one named handler plus the key of the menu the card opens.",
+    from: 'onClick="{{ c.onClick }}"',
+    to: 'onClick="{{ catMenu }}" data-cat-menu="{{ c.menuKey }}"',
+    count: 2
+  },
+  {
+    why: "Same for the mobile hero's dots, which also carry a style object the " +
+         "template would stringify as [object Object].",
+    from: 'onClick="{{ d.pick }}" style="{{ d.style }}"',
+    to: 'onClick="{{ heroDot }}" data-slide="{{ d.index }}" style="{{ d.css }}"',
+    count: 1
+  },
+  /* The nav already owns a handler called toggleShop — the Shop All mega-menu — and
+   * the hero's dropdown is a different control, so it gets its own name. */
+  { why: "Hero mini dropdown, renamed off the nav's toggleShop.",
+    from: 'onClick="{{ toggleShop }}"', to: 'onClick="{{ heroMiniShop }}"', count: 2 },
+  { why: "The other hero mini dropdown, renamed to match.",
+    from: 'onClick="{{ toggleTech }}"', to: 'onClick="{{ heroMiniTech }}"', count: 2 }
+];
+for (const { from, to, why, count } of REFRESH_PATCHES) {
+  const hits = refreshTemplate.split(from).length - 1;
+  if (hits !== count) {
+    throw new Error(`Refresh patch matched ${hits} times, expected ${count} — ${why}`);
+  }
+  refreshTemplate = refreshTemplate.replaceAll(from, to);
+}
+
+/** Pulls out the block a top-level `<sc-if value="{{ name }}">` wraps. */
+function refreshLayout(name) {
+  let from = 0;
+  for (;;) {
+    const block = findBlock(refreshTemplate, "sc-if", from);
+    if (!block) throw new Error(`The refresh handoff has no <sc-if value="{{ ${name} }}">`);
+    if (unwrapExpr(readAttr(block.attrs, "value")) === name) {
+      return refreshTemplate.slice(block.innerStart, block.innerEnd);
+    }
+    from = block.openStart + 1;
+  }
+}
+
+/** Splits a layout into its labelled sections, keeping the order the design wrote. */
+function refreshSections(layout) {
+  const out = [];
+  const re = /<(section|div) data-screen-label="([^"]+)"/g;
+  const starts = [...layout.matchAll(re)];
+  for (let i = 0; i < starts.length; i += 1) {
+    const tag = starts[i][1];
+    const block = findBlock(layout, tag, starts[i].index);
+    out.push({ label: starts[i][2], tag, html: layout.slice(block.openStart, block.end) });
+    re.lastIndex = block.end;
+  }
+  return out;
+}
+
+const cssText = (style) =>
+  Object.entries(style)
+    .map(([k, v]) => `${k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())}: ${v}`)
+    .join("; ");
+
+/* The scope every refresh section resolves against. Handlers are absent on purpose:
+ * `interpolate` leaves an unresolved binding alone and `lowerInteractions` turns it
+ * into a data hook, which is how the rest of the page's interactions are wired. */
+const refreshBase = {
+  /* The design hands some styles to the template as objects rather than strings
+   * (`c.imgBox`, `c.mobCell`). Interpolated as-is they become "[object Object]", which
+   * silently drops the rule — and for imgBox that rule is `position: relative`, so the
+   * card image escapes its box and covers the page. Flattened here; the guard below
+   * catches any further one the design adds. */
+  cats: refresh.cats.map((c) => {
+    const out = { ...c };
+    for (const [k, v] of Object.entries(out)) {
+      if (v && typeof v === "object" && !Array.isArray(v)) out[k] = cssText(v);
+    }
+    return out;
+  }),
+  oems: refresh.oems,
+  badges: refresh.badges,
+  badges4: refresh.badges4,
+  actions: refresh.actions,
+  total: refresh.total,
+  menuOpen: false,
+  miniOpen: false,
+  /* sc-for is expanded before sc-if, so every list the template loops over has to
+   * resolve even inside a block that is about to be dropped. */
+  minis: [],
+  menuItems: [],
+  // The mini panels start closed, so the buttons render in their resting colours.
+  shopBg: "#EA4E32", techBg: "#12305A", shopRot: "none", techRot: "none"
+};
+
+/** Renders one layout's sections, with the hero repeated once per slide. */
+function buildRefreshLayout(name, cls) {
+  const parts = [];
+  for (const { label, html } of refreshSections(refreshLayout(name))) {
+    if (/Hero$/.test(label)) {
+      refresh.slides.forEach((s, i) => {
+        const dots = refresh.slides.map((_, k) => ({
+          index: k,
+          label: `Slide ${k + 1}`,
+          css: cssText({
+            width: k === i ? "28px" : "10px", height: "10px", padding: 0, border: 0,
+            cursor: "pointer", background: k === i ? "#EA4E32" : "rgba(255,255,255,0.4)",
+            transition: "width 200ms ease"
+          })
+        }));
+        const scope = {
+          ...refreshBase, slide: s.slide, slideNum: s.num, dots,
+          hero: name === "isMob" ? s.heroMob : s.hero
+        };
+        let markup = expandDirectives(withMinis(html, scope), scope);
+        markup = addAttrsToFirstTag(markup, `class="r26-slide" data-r26-slide="${i}"${i ? " hidden" : ""}`);
+        parts.push(markup);
+      });
+    } else if (/Categories$/.test(label)) {
+      parts.push(refreshCategories(html));
+    } else {
+      parts.push(expandDirectives(html, refreshBase));
+    }
+  }
+  return refreshPin(refreshAssets(`<div class="r26 ${cls}">${parts.join("\n")}</div>`));
+}
+
+/** Finds the `<sc-if value="{{ name }}">` block inside a section's raw markup. */
+function conditionalBlock(html, name) {
+  let from = 0;
+  for (;;) {
+    const block = findBlock(html, "sc-if", from);
+    if (!block) throw new Error(`The refresh section has no <sc-if value="{{ ${name} }}">`);
+    if (unwrapExpr(readAttr(block.attrs, "value")) === name) return block;
+    from = block.openStart + 1;
+  }
+}
+
+/* The hero's mini cards sit behind two dropdown buttons, inside the slide. Both sets
+ * are rendered in place of the design's single conditional block, so each keeps the
+ * position and spacing the design gave it; site.js only unhides one. */
+function withMinis(heroHtml, scope) {
+  if (!scope.slide.minis) return heroHtml;
+  const block = conditionalBlock(heroHtml, "miniOpen");
+  const inner = heroHtml.slice(block.innerStart, block.innerEnd);
+  const panels = ["shop", "tech"].map((set) =>
+    `<div class="r26-minis" data-r26-minis="${set}" hidden>` +
+    expandDirectives(inner, { ...scope, miniOpen: true, minis: refresh.minis[set] }) +
+    `</div>`
+  ).join("");
+  return heroHtml.slice(0, block.openStart) + panels + heroHtml.slice(block.end);
+}
+
+/* The two layouts open a category panel differently, and both are reproduced rather
+ * than flattened to one. Desktop drops a single panel under the whole grid; mobile
+ * inserts it inside the grid, at the end of the row holding the card that was tapped,
+ * which is what the design's `panelHere` computes. */
+function refreshCategories(html) {
+  return html.includes("{{ c.panelHere }}")
+    ? refreshCategoriesInline(html)
+    : refreshCategoriesBelow(html);
+}
+
+/** Desktop: every panel rendered in the slot the design opens one in, hidden. */
+function refreshCategoriesBelow(html) {
+  const block = conditionalBlock(html, "menuOpen");
+  const inner = html.slice(block.innerStart, block.innerEnd);
+  const panels = Object.entries(refresh.menus).map(([key, items]) =>
+    `<div class="r26-catmenu" data-r26-catmenu="${key}" hidden>` +
+    expandDirectives(inner, { ...refreshBase, menuOpen: true, menuItems: items }) +
+    `</div>`
+  ).join("");
+  const spliced = html.slice(0, block.openStart) + panels + html.slice(block.end);
+  return expandDirectives(spliced, refreshBase);
+}
+
+/** Mobile: the loop is expanded here so each panel lands at the end of its own row. */
+function refreshCategoriesInline(html) {
+  const loop = findBlock(html, "sc-for", html.indexOf('<sc-for list="{{ cats }}"'));
+  if (!loop) throw new Error("The mobile category section has no cats loop");
+  const inner = html.slice(loop.innerStart, loop.innerEnd);
+  const panel = conditionalBlock(inner, "c.panelHere");
+  const cardMarkup = inner.slice(0, panel.openStart) + inner.slice(panel.end);
+  const panelMarkup = inner.slice(panel.innerStart, panel.innerEnd);
+
+  const cats = refreshBase.cats;   // flattened styles, not the raw model
+  // The design puts the panel at the end of the two-column row the open card sits in.
+  const rowEnd = (k) => Math.min(k | 1, cats.length - 1);
+
+  const cells = cats.map((c, k) => {
+    let out = expandDirectives(cardMarkup, { ...refreshBase, c });
+    const mine = cats
+      .map((other, j) => ({ other, j }))
+      .filter(({ other, j }) => other.menuKey && rowEnd(j) === k);
+    for (const { other } of mine) {
+      out += `<div class="r26-catmenu" data-r26-catmenu="${other.menuKey}" hidden>` +
+             expandDirectives(panelMarkup, { ...refreshBase, c: other, menuItems: refresh.menus[other.menuKey] }) +
+             `</div>`;
+    }
+    return out;
+  });
+
+  const rebuilt = html.slice(0, loop.openStart) + cells.join("\n") + html.slice(loop.end);
+  return expandDirectives(rebuilt, refreshBase);
+}
+
+/* The refresh handoff addresses its images relative to its own folder; in the shipped
+ * page they all live together under assets/uploads/r26/. Rewritten by basename, which
+ * is safe because tools/sync-assets.mjs copies them flat and would have collided on a
+ * duplicate name. Both the src attributes and the CSS url() backgrounds are covered. */
+/* The first handoff's page.css carries blanket responsive rules — `#page
+ * [style*="grid-template-columns"] { grid-template-columns: 1fr !important }` and a
+ * matching one for `gap` — that were written to collapse *its* grids on small screens.
+ * They reach into the refresh too and flatten its two-column layouts.
+ *
+ * Rather than weaken those rules for the sections that still depend on them, the
+ * refresh pins its own values: an inline declaration marked !important outranks an
+ * !important rule from a stylesheet, so each grid keeps exactly what the design wrote.
+ * Safe here because the refresh ships a whole layout per breakpoint and never restyles
+ * one grid across widths. */
+function refreshPin(html) {
+  return html.replace(/style="([^"]*)"/g, (whole, decls) => {
+    if (!/grid-template-columns|(^|;)\s*gap\s*:/.test(decls)) return whole;
+    const pinned = decls.replace(
+      /(grid-template-columns|gap)\s*:\s*([^;"]+?)(\s*!important)?(?=;|$)/g,
+      (_m, prop, value) => `${prop}: ${value.trim()} !important`
+    );
+    return `style="${pinned}"`;
+  });
+}
+
+function refreshAssets(html) {
+  return html.replace(/assets\/(?:cr\/)?([A-Za-z0-9._-]+\.(?:png|jpe?g|webp|svg|gif))/g,
+    (whole, file) => (whole.startsWith("assets/uploads/") ? whole : `assets/uploads/r26/${file}`));
+}
+
+const refreshDesktop = buildRefreshLayout("isDesk", "r26-desk");
+const refreshMobile = buildRefreshLayout("isMob", "r26-mob");
+
+for (const [name, html] of [["desktop", refreshDesktop], ["mobile", refreshMobile]]) {
+  if (html.includes("[object Object]")) {
+    throw new Error(`The refresh ${name} layout stringified an object into the markup`);
+  }
+}
+
+/* Splice: the three sections the refresh replaces come out, the new markup goes in. */
+const REPLACED = ["Hero — Tree Care", "Now You Can Order Online", "About Us"];
+for (const [i, label] of REPLACED.entries()) {
+  const at = patched.indexOf(`<section data-screen-label="${label}"`);
+  if (at === -1) throw new Error(`The refresh replaces "${label}", which the page no longer has`);
+  const block = findBlock(patched, "section", at);
+  const replacement = i === 0 ? refreshDesktop + "\n" + refreshMobile : "";
+  patched = patched.slice(0, block.openStart) + replacement + patched.slice(block.end);
+}
+
 const sheet = new StyleSheet();
 
 let body = expandDirectives(patched, {});
@@ -489,8 +768,8 @@ for (const name of new Set(boundRefs)) {
  * record of what Claude Design exported. Each one fails the build if its text is no
  * longer present, rather than silently going stale when the design is re-exported. */
 const COPY_FIXES = [
-  // The "/ Reno" qualifier was dropped from the Saw Blades category card.
-  ["Saw Blades / Reno", "Saw Blades"],
+  /* The "/ Reno" qualifier fix retired with the September 2026 refresh: it corrected a
+   * card in "Now you can order online", a section that refresh replaces outright. */
   // Commercial Orders now states nationwide coverage. The leading "across " keeps this
   // unique: three other places name the same three states and must keep doing so.
   ["across California, Nevada and Arizona.", "Nationwide across the U.S."],
@@ -502,59 +781,18 @@ const COPY_FIXES = [
    "OEM-compatible blades and replacement parts matched to your equipment manufacturer."],
   ["All brands", "All OEMs"]
 ];
-for (const [from, to] of COPY_FIXES) {
-  if (!body.includes(from)) {
-    throw new Error(`Copy fix is stale: "${from}" no longer appears in the design`);
-  }
-  body = body.replaceAll(from, to);
+const staleCopy = COPY_FIXES.filter(([from]) => !body.includes(from)).map(([from]) => from);
+if (staleCopy.length) {
+  throw new Error(`Copy fixes are stale, no longer in the design:\n  ${staleCopy.join("\n  ")}`);
 }
+for (const [from, to] of COPY_FIXES) body = body.replaceAll(from, to);
 
-/* Corrections to the five category cards: their label, and where they point.
- *
- * Each card is found by the alt text it currently carries, and only the markup inside
- * that one <a class="panel-card"> … </a> is rewritten. A blanket replacement is not an
- * option here: "Saw Blades" appears 13 times across the page and "Shear Blades" 10, in
- * menus and category lists that must keep their own wording.
- *
- * `label` renames both the visible heading and the image's alt, so the link is
- * announced consistently; `href` is optional and only set where the destination was
- * also wrong. Nothing about the imagery changes. */
-const CARD_FIXES = [
-  { find: "Shear Blades",                    label: "Printing & Binding" },
-  { find: "Granulator Knives & Screens",     label: "Granulators / Recycling & Plastics" },
-  { find: "Saw Blades",                      label: "Diablo & Freud Parts" },
-  // Sharpening Support also pointed at the brush chipper knives category.
-  { find: "Sharpening Support",              label: "Sharpening",
-    href: "https://lagrinding.com/sharpening/" }
-];
-
-/* Matched by walking the panel cards themselves: the same alt text also appears in the
- * mega-menu and the category rails, so searching the whole document would be ambiguous
- * (and the build refuses rather than guess — that is how this was caught). */
-const cardRe = /<a class="panel-card" href="([^"]*)"[\s\S]*?<\/a>/g;
-const applied = new Map(CARD_FIXES.map((f) => [f.find, 0]));
-
-body = body.replace(cardRe, (block, currentHref) => {
-  const altMatch = block.match(/\salt="([^"]*)"/);
-  if (!altMatch) return block;
-  const fix = CARD_FIXES.find((f) => escapeHtml(f.find) === altMatch[1]);
-  if (!fix) return block;
-
-  applied.set(fix.find, applied.get(fix.find) + 1);
-  const label = escapeHtml(fix.label);
-
-  let out = block.replace(altMatch[0], ` alt="${label}"`);
-  if (fix.href) out = out.replace(`href="${currentHref}"`, `href="${fix.href}"`);
-
-  const headRe = /(<span class="panel-head"[^>]*>)[^<]*(<\/span>)/;
-  if (!headRe.test(out)) throw new Error(`Card fix: no heading in the card for "${fix.find}"`);
-  return out.replace(headRe, `$1${label}$2`);
-});
-
-for (const [find, count] of applied) {
-  if (count !== 1) {
-    throw new Error(`Card fix for "${find}" matched ${count} cards, expected exactly 1`);
-  }
+/* The five category-card corrections retired with the September 2026 refresh. Every
+ * one of them rewrote a card inside "Now you can order online", and that section is
+ * replaced outright by the refresh's own Products grid, which carries its own labels
+ * and destinations. Nothing on the page still uses .panel-card. */
+if (body.includes("panel-card")) {
+  throw new Error("A .panel-card survived the refresh; its label fixes were retired");
 }
 
 const leftoverExpr = body.match(/\{\{[^}]*\}\}/);
@@ -568,7 +806,16 @@ if (leftoverTag) throw new Error(`Unresolved template directive: ${leftoverTag[0
 const localAssets = new Set(
   [...body.matchAll(/(?:src|href)="assets\/uploads\/([^"]+)"/g)].map((m) => decodeURIComponent(m[1]))
 );
-const onDisk = new Set(await readdir(join(ROOT, "assets", "uploads")));
+/* Read recursively: the September 2026 refresh keeps its images in a subfolder. */
+async function filesUnder(dir, prefix = "") {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) out.push(...await filesUnder(join(dir, entry.name), prefix + entry.name + "/"));
+    else out.push(prefix + entry.name);
+  }
+  return out;
+}
+const onDisk = new Set(await filesUnder(join(ROOT, "assets", "uploads")));
 const absent = [...localAssets].filter((name) => !onDisk.has(name)).sort();
 if (absent.length) {
   throw new Error(
@@ -594,7 +841,24 @@ const STRIP_CSS = `
 .logo-link:hover, .logo-link:focus-visible { background: #F2F2F3; }
 `;
 
-await writeFile(join(OUT, "assets", "css", "site.css"), sheet.toCss() + STRIP_CSS, "utf8");
+/* The refresh ships both layouts and lets CSS pick, at the 1024px line the design
+ * itself switches on. Doing it here rather than in desktop.css or mobile.css keeps
+ * those two files' single-media-query guarantee intact — neither covers 641–1023px,
+ * and this rule has to. */
+const REFRESH_CSS = `
+/* September 2026 refresh — one layout is shown, the other is inert. */
+@media (max-width: 1023.98px) { .r26-desk { display: none !important; } }
+@media (min-width: 1024px)    { .r26-mob  { display: none !important; } }
+/* Slides and panels are switched by assets/js/site.js via the hidden attribute;
+   make sure nothing in the design's inline display wins over it. */
+.r26 [hidden] { display: none !important; }
+`;
+
+await writeFile(
+  join(OUT, "assets", "css", "site.css"),
+  sheet.toCss() + STRIP_CSS + REFRESH_CSS,
+  "utf8"
+);
 
 const document = `<!DOCTYPE html>
 <html lang="en">

@@ -315,7 +315,14 @@ export const data = model;
 /* Handlers this build adds on top of the handoff, for menu sections the design does
  * not have. They follow the design's own accordion convention (`acc<Name>T` toggles
  * the `acc<Name>` panel) and are implemented in assets/js/site.js like the rest. */
-const ADDED_HANDLERS = ["accOemT"];
+const ADDED_HANDLERS = [
+  "accOemT",
+  /* The September 2026 refresh brings its own handoff, whose handlers this build
+   * lowers the same way: the hero slider and its swipe, the two mini-card
+   * dropdowns, and the category panels. */
+  "prev", "next", "heroDot", "swTs", "swTe", "swWheel",
+  "heroMiniShop", "heroMiniTech", "catMenu"
+];
 
 /** The names the template may bind as handlers — every function renderVals returns. */
 export const handlerNames = new Set([

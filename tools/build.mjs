@@ -469,6 +469,17 @@ const REFRESH_PATCHES = [
     to: 'onClick="{{ heroDot }}" data-slide="{{ d.index }}" style="{{ d.css }}"',
     count: 1
   },
+  /* The OEM strip under About Us was a row of plain images. Each cell becomes a link
+   * to that manufacturer's shop filter — the same URL the Shop by OEM cards already
+   * use, read from the first handoff's model rather than written again here. */
+  { why: "Desktop OEM strip: cells become links.",
+    from: '<span style="display: flex; align-items: center; justify-content: center; padding: 18px 14px; border-left: 1px solid rgba(255,255,255,0.14)"><img src="{{ o.img }}" alt="{{ o.name }}" style="max-width: 100%; max-height: 44px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.85"></span>',
+    to: '<a class="r26-oem" href="{{ o.href }}" aria-label="{{ o.name }}" style="display: flex; align-items: center; justify-content: center; padding: 18px 14px; border-left: 1px solid rgba(255,255,255,0.14)"><img src="{{ o.img }}" alt="{{ o.name }}" style="max-width: 100%; max-height: 44px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.85"></a>',
+    count: 1 },
+  { why: "Mobile OEM strip: the same, with that layout's own cell sizing.",
+    from: '<span style="display: flex; align-items: center; justify-content: center; height: 64px; padding: 8px; background: #0b0f14"><img src="{{ o.img }}" alt="{{ o.name }}" style="max-width: 100%; max-height: 30px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.85"></span>',
+    to: '<a class="r26-oem" href="{{ o.href }}" aria-label="{{ o.name }}" style="display: flex; align-items: center; justify-content: center; height: 64px; padding: 8px; background: #0b0f14"><img src="{{ o.img }}" alt="{{ o.name }}" style="max-width: 100%; max-height: 30px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.85"></a>',
+    count: 1 },
   /* The nav already owns a handler called toggleShop — the Shop All mega-menu — and
    * the hero's dropdown is a different control, so it gets its own name. */
   { why: "Hero mini dropdown, renamed off the nav's toggleShop.",
@@ -532,7 +543,14 @@ const refreshBase = {
     }
     return out;
   }),
-  oems: refresh.oems,
+  /* The strip's eight manufacturers all appear in the Shop by OEM grid, so they reuse
+   * its destinations instead of inventing any. A name that grid does not know fails
+   * the build rather than shipping a cell that goes nowhere. */
+  oems: refresh.oems.map((o) => {
+    const known = data.oems.find((x) => x.name.toLowerCase() === o.name.toLowerCase());
+    if (!known) throw new Error(`OEM strip: "${o.name}" has no destination in the Shop by OEM list`);
+    return { ...o, href: known.href };
+  }),
   badges: refresh.badges,
   badges4: refresh.badges4,
   actions: refresh.actions,
@@ -852,6 +870,19 @@ const REFRESH_CSS = `
 /* Slides and panels are switched by assets/js/site.js via the hidden attribute;
    make sure nothing in the design's inline display wins over it. */
 .r26 [hidden] { display: none !important; }
+
+/* OEM strip under About Us: white marks at rest, true colours on hover, each one a
+   link to that manufacturer's shop filter.
+
+   The cell lightens on hover rather than just dropping the filter. Several of these
+   are dark artwork — Bobcat's is solid black — and revealed against the strip's near
+   black they would range from hard to read to invisible. Lightening the cell is what
+   the distributor strip already does, and it lets every mark show its real colour.
+   The declarations are !important because the design sets the filter inline. */
+.r26-oem { transition: background 180ms ease; }
+.r26-oem img { transition: filter 180ms ease, opacity 180ms ease; }
+.r26-oem:hover, .r26-oem:focus-visible { background: #ffffff !important; }
+.r26-oem:hover img, .r26-oem:focus-visible img { filter: none !important; opacity: 1 !important; }
 `;
 
 await writeFile(

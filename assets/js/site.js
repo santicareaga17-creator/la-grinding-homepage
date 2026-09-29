@@ -329,8 +329,8 @@
       if (!isNaN(n)) { show(n); restart(); }
     };
 
-    /* Swipe and horizontal wheel, with the design's own thresholds. */
-    var sx = null, sy = null, wheelAt = 0;
+    /* Swipe, and the trackpad's two-finger horizontal gesture. */
+    var sx = null, sy = null;
     actions.swTs = function (e) {
       var t = e.touches && e.touches[0];
       if (t) { sx = t.clientX; sy = t.clientY; }
@@ -343,12 +343,26 @@
       sx = null;
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
     };
+    /* A trackpad reports one gesture as a long run of small deltas, so the travel is
+     * accumulated rather than tested per event — the design's flat 25px threshold
+     * meant a gentle two-finger swipe never reached it. Cancelling the event also
+     * stops the browser claiming the gesture as a back/forward navigation. The lock
+     * keeps one flick from skipping several slides. This is the same handling the
+     * page's other slider already uses. */
+    var wheelAcc = 0;
+    var wheelLock = false;
+
     actions.swWheel = function (e) {
-      if (Math.abs(e.deltaX) < 25 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
-      var now = Date.now();
-      if (now - wheelAt < 700) return;
-      wheelAt = now;
-      go(e.deltaX > 0 ? 1 : -1);
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      if (e.cancelable) e.preventDefault();
+      if (wheelLock) return;
+      wheelAcc += e.deltaX;
+      if (Math.abs(wheelAcc) > 60) {
+        go(wheelAcc > 0 ? 1 : -1);
+        wheelAcc = 0;
+        wheelLock = true;
+        setTimeout(function () { wheelLock = false; }, 550);
+      }
     };
 
     /* The hero's two dropdowns, on the one slide that has them. */
@@ -421,7 +435,13 @@
       if (!handler) return;
       // The element is passed alongside the event: several refresh handlers are shared
       // by a set of controls and read which one fired from its own data attribute.
-      el.addEventListener(events[attr], function (e) { handler.call(el, e, el); });
+      // wheel must be non-passive: the hero cancels the gesture so the browser does
+      // not turn a two-finger swipe into a back/forward navigation.
+      el.addEventListener(
+        events[attr],
+        function (e) { handler.call(el, e, el); },
+        attr === "data-on-wheel" ? { passive: false } : undefined
+      );
     });
   });
 
